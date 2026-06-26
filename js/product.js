@@ -66,7 +66,6 @@ Buy Now
 function addProductToCart() {
 
     const size = document.getElementById("size").value;
-
     const qty = Number(document.getElementById("qty").value);
 
     const item = {
@@ -81,14 +80,7 @@ function addProductToCart() {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    alert("Added to cart!");
-
-}
-
-function buyNow() {
-
-    addProductToCart();
-
+    // Redirect directly to cart page
     window.location.href = "cart.html";
 
 }
