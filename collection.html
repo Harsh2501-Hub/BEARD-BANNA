@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BEARD BANNA Collection</title>
+
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="#products">Products</a>
+        <a href="index.html#contact">Contact</a>
+
+        <a href="wishlist.html" id="wishlist-link">
+            ❤️ Wishlist <span id="wishlist-count">0</span>
+        </a>
+
+        <a href="cart.html" id="cart-link">
+            🛒 Cart <span id="cart-count">0</span>
+        </a>
+    </nav>
+
+    <section class="section">
+
+        <h2>Our Collection</h2>
+
+        <!-- ==========================
+         SEARCH BAR
+    ========================== -->
+
+        <div class="search-container">
+
+            <div class="search-box">
+
+                <span class="search-icon">🔍</span>
+
+                <input type="text" id="search-input" placeholder="Search products, categories..." autocomplete="off">
+
+                <button id="clear-search" class="clear-search">
+
+                    ✕
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="search-result">
+
+            <span id="search-result-text">
+
+                Showing 3 Products
+
+            </span>
+
+        </div>
+
+        <div id="product-list" class="collection"></div>
+
+    </section>
+
+    <footer>
+        <p>© 2026 BEARD BANNA | HONOR • HISTORY • HERITAGE</p>
+    </footer>
+
+    <script src="js/products.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/wishlist.js"></script>
+    <script src="js/collection.js"></script>
+    <script src="js/main.js"></script>
+
+</body>
+
+</html>

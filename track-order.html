@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Track Order | BEARD BANNA</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+    <nav>
+
+        <a href="index.html">Home</a>
+
+        <a href="collection.html">Collection</a>
+
+    </nav>
+
+    <section class="section">
+
+        <div class="tracking-container">
+
+            <h1>Track Your Order</h1>
+
+            <div class="tracking-header">
+
+                <p>
+
+                    <b>Order ID :</b>
+
+                    <span id="track-order-id"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Order Date :</b>
+
+                    <span id="track-order-date"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Estimated Delivery :</b>
+
+                    <span id="track-delivery-date"></span>
+
+                </p>
+
+            </div>
+
+            <div class="tracking-timeline">
+
+                <div class="tracking-step active" id="step1">
+
+                    <div class="tracking-icon">
+                        ✔
+                    </div>
+
+                    <div class="tracking-content">
+
+                        <h3>Order Confirmed</h3>
+
+                        <p>Your order has been placed successfully.</p>
+
+                        <small id="time1"></small>
+
+                    </div>
+
+                </div>
+
+                <div class="tracking-line"></div>
+
+                <div class="tracking-step" id="step2">
+
+                    <div class="tracking-icon">
+                        📦
+                    </div>
+
+                    <div class="tracking-content">
+
+                        <h3>Packed</h3>
+
+                        <p>Your order is being packed.</p>
+
+                        <small id="time2"></small>
+
+                    </div>
+
+                </div>
+
+                <div class="tracking-line"></div>
+
+                <div class="tracking-step" id="step3">
+
+                    <div class="tracking-icon">
+                        🚚
+                    </div>
+
+                    <div class="tracking-content">
+
+                        <h3>Shipped</h3>
+
+                        <p>Your package has left our warehouse.</p>
+
+                        <small id="time3"></small>
+
+                    </div>
+
+                </div>
+
+                <div class="tracking-line"></div>
+
+                <div class="tracking-step" id="step4">
+
+                    <div class="tracking-icon">
+                        🛵
+                    </div>
+
+                    <div class="tracking-content">
+
+                        <h3>Out For Delivery</h3>
+
+                        <p>Your package is on the way.</p>
+
+                        <small id="time4"></small>
+
+                    </div>
+
+                </div>
+
+                <div class="tracking-line"></div>
+
+                <div class="tracking-step" id="step5">
+
+                    <div class="tracking-icon">
+                        🏠
+                    </div>
+
+                    <div class="tracking-content">
+
+                        <h3>Delivered</h3>
+
+                        <p>Package delivered successfully.</p>
+
+                        <small id="time5"></small>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="tracking-info">
+
+                <div class="info-card">
+
+                    <h2>👤 Customer Details</h2>
+
+                    <p><b>Name:</b> <span id="customer-name"></span></p>
+
+                    <p><b>Email:</b> <span id="customer-email"></span></p>
+
+                    <p><b>Phone:</b> <span id="customer-phone"></span></p>
+
+                </div>
+
+                <div class="info-card">
+
+                    <h2>🚚 Delivery Details</h2>
+
+                    <p><b>Courier:</b> BEARD BANNA Express</p>
+
+                    <p><b>Tracking No:</b> <span id="tracking-number"></span></p>
+
+                    <p><b>Address:</b></p>
+
+                    <p id="customer-address"></p>
+
+                </div>
+
+            </div>
+
+            <div class="tracking-summary">
+
+                <h2>Products Ordered</h2>
+
+                <div id="tracking-products"></div>
+
+            </div>
+
+            <div class="tracking-buttons">
+
+                <div class="delivery-live">
+
+                    <h2>🚚 Delivery Status</h2>
+
+                    <div class="delivery-road">
+
+                        <div class="delivery-van">
+
+                            🚚
+
+                        </div>
+
+                    </div>
+
+                    <div class="delivery-info">
+
+                        <p>
+
+                            <b>Courier :</b>
+
+                            BEARD BANNA Express
+
+                        </p>
+
+                        <p>
+
+                            <b>Estimated Arrival :</b>
+
+                            <span id="arrival-time">
+
+                                Calculating...
+
+                            </span>
+
+                        </p>
+
+                        <p id="delivery-message">
+
+                            Your package is being prepared.
+
+                        </p>
+
+                    </div>
+
+                </div>
+
+                <a href="index.html" class="collection-btn">
+
+                    Home
+
+                </a>
+
+                <a href="collection.html" class="collection-btn">
+
+                    Continue Shopping
+
+                </a>
+
+            </div>
+
+        </div>
+
+        <div class="progress-box">
+
+            <div class="progress-header">
+
+                <h3>Order Progress</h3>
+
+                <span id="progress-percent">20%</span>
+
+            </div>
+
+            <div class="progress-bar">
+
+                <div id="progress-fill"></div>
+
+            </div>
+
+            <p id="current-status">
+
+                Current Status :
+                Order Confirmed
+
+            </p>
+
+        </div>
+
+    </section>
+
+    <script src="js/track-order.js"></script>
+
+</body>
+
+</html>
