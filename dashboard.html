@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Dashboard | BEARD BANNA</title>
+
+    <link rel="stylesheet" href="../css2/admin.css">
+
+</head>
+
+<body class="admin-dashboard">
+
+    <div class="admin-container">
+
+        <!-- Sidebar -->
+
+        <aside class="sidebar">
+
+            <div class="logo">
+
+                <h2>👑 BEARD BANNA</h2>
+
+                <span>Admin Panel</span>
+
+            </div>
+
+            <nav>
+
+                <a href="dashboard.html" class="active">
+                    📊 Dashboard
+                </a>
+
+                <a href="products.html">
+                    📦 Products
+                </a>
+
+                <a href="categories.html">
+                    📂 Categories
+                </a>
+
+                <a href="orders.html">
+                    🛒 Orders
+                </a>
+
+                <a href="customers.html">
+                    👥 Customers
+                </a>
+
+                <a href="analytics.html">
+                    📈 Analytics
+                </a>
+
+                <a href="settings.html">
+                    ⚙ Settings
+                </a>
+
+            </nav>
+
+            <button id="logout-btn">
+                🚪 Logout
+            </button>
+
+        </aside>
+
+        <!-- Main Content -->
+
+        <main class="dashboard-content">
+
+            <header class="dashboard-header">
+
+                <h1>
+                    Dashboard
+                </h1>
+
+                <p>
+                    Welcome back, Admin 👋
+                </p>
+
+            </header>
+
+            <!-- Dashboard Cards -->
+
+            <section class="dashboard-cards">
+
+                <div class="card">
+
+                    <h3>📦 Products</h3>
+
+                    <h2 id="total-products">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>👥 Customers</h3>
+
+                    <h2 id="total-customers">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>🛒 Orders</h3>
+
+                    <h2 id="total-orders">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>💰 Revenue</h3>
+
+                    <h2 id="total-revenue">₹0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>❤️ Wishlist</h3>
+
+                    <h2 id="total-wishlist">0</h2>
+
+                </div>
+
+                <div class="card">
+
+                    <h3>🔥 Popular Product</h3>
+
+                    <h2 id="popular-product">--</h2>
+
+                </div>
+
+            </section>
+
+            <!-- Orders + Quick Actions -->
+
+            <div class="dashboard-row">
+
+                <section class="recent-orders">
+
+                    <div class="section-title">
+
+                        <h2>🛒 Recent Orders</h2>
+
+                    </div>
+
+                    <table>
+
+                        <thead>
+
+                            <tr>
+
+                                <th>Order ID</th>
+
+                                <th>Customer</th>
+
+                                <th>Amount</th>
+
+                                <th>Status</th>
+
+                                <th>Date</th>
+
+                            </tr>
+
+                        </thead>
+
+                        <tbody id="recent-orders-body">
+
+                        </tbody>
+
+                    </table>
+
+                </section>
+
+                <aside class="quick-actions">
+
+                    <h2>
+                        ⚡ Quick Actions
+                    </h2>
+
+                    <button id="add-product-btn">
+                        ➕ Add Product
+                    </button>
+
+                    <button id="view-orders-btn">
+                        🛒 View Orders
+                    </button>
+
+                    <button id="customers-btn">
+                        👥 Customers
+                    </button>
+
+                    <button id="settings-btn">
+                        ⚙ Settings
+                    </button>
+
+                </aside>
+
+            </div>
+
+            <!-- Recent Customers -->
+
+            <section class="recent-customers">
+
+                <div class="section-title">
+
+                    <h2>
+                        👥 Recent Customers
+                    </h2>
+
+                </div>
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Name</th>
+
+                            <th>Email</th>
+
+                            <th>Phone</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="recent-customers-body">
+
+                    </tbody>
+
+                </table>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <script src="../js/products.js"></script>
+    <script src="../js/ui.js"></script>
+    <script src="../admin-js/admin-auth.js"></script>
+    <script src="../admin-js/dashboard.js"></script>
+
+</body>
+
+</html>
