@@ -1,1 +1,300 @@
-.html
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Order Successful | BEARD BANNA</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+
+    <nav>
+
+        <a href="index.html">Home</a>
+
+        <a href="collection.html">Collection</a>
+
+    </nav>
+
+    <section class="success-section">
+
+        <div class="success-card">
+
+            <div class="success-icon">
+
+                ✔
+
+            </div>
+
+            <h1>
+
+                Order Placed Successfully!
+
+            </h1>
+
+            <p>
+
+                Thank you for shopping with
+
+                <b>BEARD BANNA</b>
+
+            </p>
+
+            <div class="order-info">
+
+                <p>
+
+                    <b>Order ID :</b>
+
+                    <span id="order-id"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Order Date :</b>
+
+                    <span id="order-date"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Estimated Delivery :</b>
+
+                    <span id="delivery-date"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Payment :</b>
+
+                    <span id="payment-method"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Total Items :</b>
+
+                    <span id="total-items"></span>
+
+                </p>
+
+                <p>
+
+                    <b>Grand Total :</b>
+
+                    ₹<span id="grand-total"></span>
+
+                </p>
+
+            </div>
+
+            <div class="success-buttons">
+
+                <a href="collection.html" class="collection-btn">
+
+                    Continue Shopping
+
+                </a>
+
+                <button class="checkout-btn" onclick="downloadInvoice()">
+
+                    Download Invoice
+
+                </button>
+
+                <a href="track-order.html" class="view-btn">
+
+                    Track Order
+
+                </a>
+
+            </div>
+
+        </div>
+
+    </section>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- ===========================
+PREMIUM INVOICE
+=========================== -->
+
+    <div id="invoice" class="invoice">
+
+        <div class="invoice-header">
+
+            <img src="images/Logo-removebg-preview.png" class="invoice-logo">
+
+            <div class="invoice-brand">
+
+                <h1>BEARD BANNA</h1>
+
+                <p>HONOR • HISTORY • HERITAGE</p>
+
+            </div>
+
+        </div>
+
+        <div class="gold-line"></div>
+
+        <div class="invoice-title">
+
+            <h2>TAX INVOICE</h2>
+
+            <p>Thank you for shopping with BEARD BANNA</p>
+
+        </div>
+
+        <div class="invoice-info">
+
+            <div class="invoice-box">
+
+                <h3>Invoice Details</h3>
+
+                <p><b>Invoice No:</b> <span id="invoice-no"></span></p>
+
+                <p><b>Order ID:</b> <span id="invoice-order-id"></span></p>
+
+                <p><b>Date:</b> <span id="invoice-date"></span></p>
+
+            </div>
+
+            <div class="invoice-box">
+
+                <h3>Customer Details</h3>
+
+                <p id="invoice-name"></p>
+
+                <p id="invoice-email"></p>
+
+                <p id="invoice-phone"></p>
+
+                <p id="invoice-address"></p>
+
+            </div>
+
+        </div>
+
+        <h3 class="product-title">Order Items</h3>
+
+        <table class="invoice-table">
+
+            <thead>
+
+                <tr>
+
+                    <th>Product</th>
+
+                    <th>Qty</th>
+
+                    <th>Price</th>
+
+                    <th>Total</th>
+
+                </tr>
+
+            </thead>
+
+            <tbody id="invoice-products"></tbody>
+
+        </table>
+
+        <div class="invoice-summary">
+
+            <div class="summary-box">
+
+                <p>Subtotal <span>₹<span id="invoice-subtotal"></span></span></p>
+
+                <p>Shipping <span id="invoice-shipping"></span></p>
+
+                <hr>
+
+                <h2>
+
+                    Grand Total
+
+                    <span>₹<span id="invoice-grand-total"></span></span>
+
+                </h2>
+
+                <div class="payment-badge">
+
+                    Payment :
+
+                    <span id="invoice-payment"></span>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <div class="gold-line"></div>
+
+        <div class="invoice-footer">
+
+            <h3>Thank You ❤️</h3>
+
+            <p>
+
+                We appreciate your trust in BEARD BANNA.
+
+            </p>
+
+            <br>
+
+            <p>
+
+                📞 +91 9586479121
+
+            </p>
+
+            <p>
+
+                ✉ info@beardbanna.com
+
+            </p>
+
+            <p>
+
+                🌐 www.beardbanna.com
+
+            </p>
+
+        </div>
+
+    </div>
+
+    <div class="invoice-footer">
+
+        Thank you for shopping with
+
+        <b>BEARD BANNA</b>
+
+        <br><br>
+
+        www.beardbanna.com
+
+    </div>
+
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="js/order-success.js"></script>
+
+
+</body>
+
+</html>

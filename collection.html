@@ -11,20 +11,55 @@
 
 <body>
 
-    <header>
-        <img src="images/Logo-removebg-preview.png" class="logo">
-        <p>OUR COLLECTION</p>
-    </header>
-
     <nav>
-        <a href="beardbanna.html">Home</a>
+        <a href="index.html">Home</a>
         <a href="#products">Products</a>
-        <a href="beardbanna.html#contact">Contact</a>
+        <a href="index.html#contact">Contact</a>
+
+        <a href="wishlist.html" id="wishlist-link">
+            ❤️ Wishlist <span id="wishlist-count">0</span>
+        </a>
+
+        <a href="cart.html" id="cart-link">
+            🛒 Cart <span id="cart-count">0</span>
+        </a>
     </nav>
 
     <section class="section">
 
         <h2>Our Collection</h2>
+
+        <!-- ==========================
+         SEARCH BAR
+    ========================== -->
+
+        <div class="search-container">
+
+            <div class="search-box">
+
+                <span class="search-icon">🔍</span>
+
+                <input type="text" id="search-input" placeholder="Search products, categories..." autocomplete="off">
+
+                <button id="clear-search" class="clear-search">
+
+                    ✕
+
+                </button>
+
+            </div>
+
+        </div>
+
+        <div class="search-result">
+
+            <span id="search-result-text">
+
+                Showing 3 Products
+
+            </span>
+
+        </div>
 
         <div id="product-list" class="collection"></div>
 
@@ -35,8 +70,11 @@
     </footer>
 
     <script src="js/products.js"></script>
+    <script src="js/ui.js"></script>
     <script src="js/cart.js"></script>
+    <script src="js/wishlist.js"></script>
     <script src="js/collection.js"></script>
+    <script src="js/main.js"></script>
 
 </body>
 

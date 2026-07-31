@@ -1,53 +1,95 @@
-// ----------------------
-// CART STORAGE
-// ----------------------
+// ===============================
+// BEARD BANNA CART SYSTEM
+// ===============================
 
+// Load cart from localStorage
 let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-// ----------------------
-// ADD TO CART
-// ----------------------
-
-function addToCart(productId) {
-
-    const product = products.find(p => p.id === productId);
-
-    const item = {
-        ...product,
-        qty: 1,
-        size: "M"
-    };
-
-    cart.push(item);
-
-    saveCart();
-
-    alert(product.name + " added to cart!");
-}
-
-// ----------------------
-// SAVE
-// ----------------------
-
+// ----------------------------
+// Save Cart
+// ----------------------------
 function saveCart() {
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
+    updateCartCount();
+
 }
 
-// ----------------------
-// DISPLAY CART
-// ----------------------
+// ----------------------------
+// Update Cart Count
+// ----------------------------
+function updateCartCount() {
 
+    const cartCount = document.getElementById("cart-count");
+
+    if (!cartCount) return;
+
+    // Always read the latest cart
+    const latestCart = JSON.parse(localStorage.getItem("cart")) || [];
+
+    cartCount.textContent = latestCart.length;
+
+}
+
+// ----------------------------
+// Add Product
+// ----------------------------
+function addToCart(productId) {
+
+    const product = products.find(p => p.id === productId);
+
+    // Check if same product with same size already exists
+    const existingItem = cart.find(item =>
+        item.id === productId && item.size === "M"
+    );
+
+    if (existingItem) {
+
+        existingItem.qty++;
+
+    } else {
+
+        cart.push({
+            ...product,
+            qty: 1,
+            size: "M"
+        });
+
+    }
+
+    saveCart();
+
+    showToast(product.name + " added to cart");
+}
+
+// ----------------------------
+// Remove Product
+// ----------------------------
+function removeItem(index) {
+
+    cart.splice(index, 1);
+
+    saveCart();
+
+    displayCart();
+
+    updateCartCount();
+
+}
+
+// ----------------------------
+// Display Cart
+// ----------------------------
 function displayCart() {
 
     const container = document.getElementById("cart-items");
 
     if (!container) return;
 
-    let total = 0;
-
     container.innerHTML = "";
+
+    let total = 0;
 
     if (cart.length === 0) {
 
@@ -73,7 +115,7 @@ function displayCart() {
 
 <h3>${item.name}</h3>
 
-<p>Price : ₹${item.price}</p>
+<p>₹${item.price}</p>
 
 <p>Size : ${item.size}</p>
 
@@ -101,38 +143,65 @@ Remove
 
 }
 
-// ----------------------
-// REMOVE
-// ----------------------
+// ----------------------------
+// Toast Message
+// ----------------------------
+function showToast(message) {
 
-function removeItem(index) {
+    const toast = document.createElement("div");
 
-    cart.splice(index, 1);
+    toast.className = "toast";
 
-    saveCart();
+    toast.innerText = message;
 
-    displayCart();
+    document.body.appendChild(toast);
 
-    updateCartCount();
+    setTimeout(() => {
 
-}
+        toast.classList.add("show");
 
-// ----------------------
-// CART COUNT
-// ----------------------
+    }, 100);
 
-function updateCartCount() {
+    setTimeout(() => {
 
-    const cartCount = document.getElementById("cart-count");
+        toast.remove();
 
-    if (cartCount) {
-
-        cartCount.innerHTML = cart.length;
-
-    }
+    }, 2500);
 
 }
+
+// ----------------------------
 
 displayCart();
 
 updateCartCount();
+
+window.addEventListener("cartUpdated", updateCartCount);
+
+window.addEventListener("storage", () => {
+
+    if (typeof updateWishlistCount === "function") {
+
+        updateWishlistCount();
+
+    }
+
+});
+
+// ----------------------------
+// GO TO CHECKOUT
+// ----------------------------
+
+function goToCheckout() {
+
+    if (cart.length === 0) {
+
+        alert("Your cart is empty!");
+
+        return;
+
+    }
+
+    window.location.href = "checkout.html";
+
+}

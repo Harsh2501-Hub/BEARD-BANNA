@@ -68,19 +68,29 @@ function addProductToCart() {
     const size = document.getElementById("size").value;
     const qty = Number(document.getElementById("qty").value);
 
-    const item = {
-        ...product,
-        size,
-        qty
-    };
-
     let cart = JSON.parse(localStorage.getItem("cart")) || [];
 
-    cart.push(item);
+    const existingItem = cart.find(item =>
+        item.id === product.id && item.size === size
+    );
+
+    if (existingItem) {
+
+        existingItem.qty += qty;
+
+    } else {
+
+        cart.push({
+            ...product,
+            size,
+            qty
+        });
+
+    }
 
     localStorage.setItem("cart", JSON.stringify(cart));
 
-    // Redirect directly to cart page
-    window.location.href = "cart.html";
+    updateCartCount();
 
+    showToast(product.name + " added to cart");
 }
