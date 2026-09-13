@@ -28,6 +28,42 @@ async function loadDashboardMetrics() {
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   let combinedOrders = [...localOrders];
 
+  // 1.1 Load Orders from Supabase database
+  try {
+    const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
+    const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
+
+    const res = await fetch(`${supabaseUrl}/rest/v1/orders?select=*&order=created_at.desc`, {
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer ' + anonKey
+      }
+    });
+
+    if (res.ok) {
+      const sbOrders = await res.json();
+      if (Array.isArray(sbOrders)) {
+        sbOrders.forEach(o => {
+          const so = {
+            id: o.order_number || o.id,
+            _id: o.id,
+            orderId: o.order_number || o.id,
+            customer: o.customer_name || "Customer",
+            amount: "₹" + (o.total || 0),
+            total: Number(o.total || 0),
+            status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending"),
+            date: new Date(o.created_at).toLocaleDateString("en-IN")
+          };
+          if (!combinedOrders.some(lo => String(lo.id) === String(so.id) || String(lo._id) === String(so._id))) {
+            combinedOrders.push(so);
+          }
+        });
+      }
+    }
+  } catch (sbErr) {
+    console.warn('[Dashboard] Supabase metrics notice:', sbErr.message);
+  }
+
   // 2. Load Inquiries from localStorage
   const inquiries = JSON.parse(localStorage.getItem("inquiries")) || [];
 
@@ -41,7 +77,7 @@ async function loadDashboardMetrics() {
       stats.totalRevenue = res.data.metrics.totalRevenue || 0;
     }
   } catch (err) {
-    console.warn("Using local metrics fallback");
+    // Silently continue to use aggregated orders
   }
 
   try {

@@ -301,14 +301,19 @@ function closeModal() {
 
 function confirmOrder() {
   const btn = document.querySelector(".confirm-btn");
-  const selectedPayment = (orderData.payment || "COD").toUpperCase();
+  if (btn && btn.disabled) return; // Prevent duplicate order on double click
 
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = `⏳ Processing Order...`;
+  }
+
+  const selectedPayment = (orderData.payment || "COD").toUpperCase();
   calculateTotals();
 
   // If Cash on Delivery, place order directly
   if (selectedPayment === "COD") {
     if (btn) {
-      btn.disabled = true;
       btn.innerHTML = `✔ Placed! Redirecting...`;
     }
     finalizeOrder({
@@ -532,31 +537,96 @@ function finalizeOrder(paymentMeta = {}) {
     console.error("Local storage error:", err);
   }
 
-  // 2. Sync order directly to backend REST API (MongoDB)
-  try {
-    if (typeof API !== "undefined" && API.post) {
-      API.post('/orders', {
-        customerName: newOrderObj.customerName,
-        customerEmail: newOrderObj.customerEmail,
-        customerPhone: newOrderObj.customerPhone,
-        shippingAddress: newOrderObj.shippingAddress,
-        items: newOrderObj.items,
+  // 2. Persist order directly into Supabase database
+  async function persistToSupabase() {
+    if (!window.supabaseClient) return;
+
+    try {
+      let sbUserId = null;
+      if (window.SupabaseAuth) {
+        try {
+          const sess = await window.SupabaseAuth.getSession();
+          if (sess?.user?.id) sbUserId = sess.user.id;
+        } catch (e) {}
+      }
+
+      const orderPayload = {
+        order_number: newOrderObj.id,
+        user_id: sbUserId,
+        customer_name: newOrderObj.customerName,
+        customer_email: newOrderObj.customerEmail,
+        customer_phone: newOrderObj.customerPhone,
+        shipping_address: newOrderObj.shippingAddress,
         subtotal: newOrderObj.subtotal,
         tax: newOrderObj.tax,
         shipping: newOrderObj.shipping,
         total: newOrderObj.grandTotal,
-        paymentMethod: newOrderObj.paymentMethod,
-        paymentStatus: newOrderObj.paymentStatus,
-        razorpayOrderId: newOrderObj.razorpayOrderId,
-        razorpayPaymentId: newOrderObj.razorpayPaymentId,
-        razorpaySignature: newOrderObj.razorpaySignature,
-        couponCode: appliedCouponCode || undefined
-      }).catch(e => console.warn('Background order sync notice:', e));
-    }
-  } catch (e) {}
+        discount: appliedDiscount || 0,
+        coupon_code: appliedCouponCode || null,
+        gst_details: newOrderObj.gstDetails || {},
+        payment_method: newOrderObj.paymentMethod,
+        payment_status: newOrderObj.paymentStatus,
+        razorpay_order_id: newOrderObj.razorpayOrderId || null,
+        razorpay_payment_id: newOrderObj.razorpayPaymentId || null,
+        razorpay_signature: newOrderObj.razorpaySignature || null,
+        order_status: newOrderObj.orderStatus || 'Processing',
+        notes: ''
+      };
 
-  // 3. Redirect to order-success page
-  window.location.href = "order-success.html";
+      const { data: insertedOrder, error: orderErr } = await window.supabaseClient
+        .from('orders')
+        .insert([orderPayload])
+        .select()
+        .single();
+
+      if (orderErr) {
+        console.warn('[Checkout] Supabase order insert notice:', orderErr.message);
+      } else if (insertedOrder && insertedOrder.id) {
+        const itemsPayload = orderItems.map(item => ({
+          order_id: insertedOrder.id,
+          product_id: String(item.productId),
+          name: item.name,
+          size: item.size,
+          quantity: Number(item.quantity || 1),
+          price: Number(item.price || 0),
+          hsn: "6109"
+        }));
+        await window.supabaseClient.from('order_items').insert(itemsPayload);
+        console.log('[Checkout] ✅ Order persisted to Supabase:', insertedOrder.order_number);
+      }
+    } catch (err) {
+      console.warn('[Checkout] Supabase sync error:', err.message);
+    }
+  }
+
+  // Execute Supabase persistence, then redirect
+  persistToSupabase().finally(() => {
+    // 3. Background REST API call (MongoDB backend fallback)
+    try {
+      if (typeof API !== "undefined" && API.post) {
+        API.post('/orders', {
+          customerName: newOrderObj.customerName,
+          customerEmail: newOrderObj.customerEmail,
+          customerPhone: newOrderObj.customerPhone,
+          shippingAddress: newOrderObj.shippingAddress,
+          items: newOrderObj.items,
+          subtotal: newOrderObj.subtotal,
+          tax: newOrderObj.tax,
+          shipping: newOrderObj.shipping,
+          total: newOrderObj.grandTotal,
+          paymentMethod: newOrderObj.paymentMethod,
+          paymentStatus: newOrderObj.paymentStatus,
+          razorpayOrderId: newOrderObj.razorpayOrderId,
+          razorpayPaymentId: newOrderObj.razorpayPaymentId,
+          razorpaySignature: newOrderObj.razorpaySignature,
+          couponCode: appliedCouponCode || undefined
+        }).catch(e => console.warn('Background order sync notice:', e));
+      }
+    } catch (e) {}
+
+    // 4. Redirect to order-success page
+    window.location.href = "order-success.html";
+  });
 }
 
 window.addEventListener("click", function (e) {

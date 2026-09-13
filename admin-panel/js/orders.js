@@ -8,6 +8,60 @@ async function loadAdminOrders() {
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   let combinedOrders = [...localOrders];
 
+  // 1. Fetch Orders from Supabase database
+  try {
+    const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
+    const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
+
+    const res = await fetch(`${supabaseUrl}/rest/v1/orders?select=*,order_items(*)&order=created_at.desc`, {
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer ' + anonKey
+      }
+    });
+
+    if (res.ok) {
+      const sbOrders = await res.json();
+      if (Array.isArray(sbOrders)) {
+        const mappedSb = sbOrders.map(o => ({
+          id: o.order_number || o.id,
+          _id: o.id,
+          orderId: o.order_number || o.id,
+          customer: o.customer_name || "Customer",
+          total: Number(o.total || 0),
+          grandTotal: Number(o.total || 0),
+          status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending"),
+          date: new Date(o.created_at).toLocaleDateString("en-IN"),
+          phone: o.customer_phone || (o.shipping_address && o.shipping_address.phone) || "9876543210",
+          email: o.customer_email || "",
+          payment: (o.payment_method || "COD").toUpperCase(),
+          address: typeof o.shipping_address === 'object' && o.shipping_address
+            ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
+            : (o.shipping_address || 'N/A'),
+          items: Array.isArray(o.order_items) ? o.order_items.map(item => ({
+            name: item.name || "Product",
+            size: item.size || "M",
+            quantity: item.quantity || 1,
+            price: item.price || 0
+          })) : []
+        }));
+
+        mappedSb.forEach(so => {
+          const idx = combinedOrders.findIndex(lo => String(lo.id) === String(so.id) || String(lo._id) === String(so._id));
+          if (idx === -1) {
+            combinedOrders.unshift(so);
+          } else {
+            // Keep status up to date
+            combinedOrders[idx] = { ...combinedOrders[idx], ...so };
+          }
+        });
+      }
+    }
+  } catch (sbErr) {
+    console.warn("[Admin Orders] Supabase fetch notice:", sbErr.message);
+  }
+
+  // 2. Fetch from REST API fallback
   try {
     const res = await API.get('/orders', { isAdmin: true });
     if (res.success && Array.isArray(res.data?.orders)) {
@@ -125,11 +179,34 @@ async function updateOrderStatus(id, status) {
     localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
   }
 
-  // 4. Try updating on REST API backend
+  // 4. Update in Supabase database
+  try {
+    const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
+    const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
+
+    const patchUrl = `${supabaseUrl}/rest/v1/orders?or=(order_number.eq.${encodeURIComponent(id)},id.eq.${encodeURIComponent(id)})`;
+    await fetch(patchUrl, {
+      method: 'PATCH',
+      headers: {
+        'apikey': anonKey,
+        'Authorization': 'Bearer ' + anonKey,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=minimal'
+      },
+      body: JSON.stringify({
+        order_status: normalizedStatus,
+        updated_at: new Date().toISOString()
+      })
+    });
+  } catch (sbErr) {
+    console.warn('[Admin Orders] Supabase status update notice:', sbErr.message);
+  }
+
+  // 5. Try updating on REST API backend fallback
   try {
     await API.put(`/orders/${id}/status`, { orderStatus: normalizedStatus.toLowerCase() }, { isAdmin: true });
   } catch (err) {
-    console.warn("Updated status locally in Admin panel");
+    // Handled silently
   }
 
   renderOrders();

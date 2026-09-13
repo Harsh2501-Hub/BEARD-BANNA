@@ -1,21 +1,81 @@
 // ===============================
-// TRACK ORDER - REAL-TIME ADMIN SYNCED
+// TRACK ORDER - REAL-TIME SUPABASE & ADMIN SYNCED
 // ===============================
 
-const currentUser = API.getCurrentUser();
-const token = API.getToken();
-
-if (!currentUser && !token) {
-  alert("Please login to track your order.");
-  window.location.href = "login.html";
-}
-
+let currentUser = null;
 let currentOrder = null;
 
+// Resolve authenticated user asynchronously without blocking or race conditions
+async function resolveUserSession() {
+  // 1. Try Supabase Auth session first (handles Google OAuth & email login)
+  if (window.supabaseClient && window.SupabaseAuth) {
+    try {
+      const { user, session } = await SupabaseAuth.getSession();
+      if (user) {
+        currentUser = {
+          id: user.id,
+          name: user.user_metadata?.full_name || user.user_metadata?.name || user.email.split('@')[0],
+          email: user.email,
+          phone: user.user_metadata?.phone || '',
+          role: 'customer'
+        };
+        if (window.API) {
+          API.setCurrentUser(currentUser);
+          if (session?.access_token) {
+            API.setToken(session.access_token);
+          }
+        }
+        return currentUser;
+      }
+    } catch (e) {
+      console.warn('[Track Order] Supabase session check notice:', e.message);
+    }
+  }
+
+  // 2. Try legacy API storage
+  if (window.API) {
+    const legacyUser = API.getCurrentUser();
+    if (legacyUser && (legacyUser.id || legacyUser.email)) {
+      currentUser = legacyUser;
+      return currentUser;
+    }
+  }
+
+  return null;
+}
+
 async function loadOrderData() {
-  const activeUser = API.getCurrentUser() || currentUser;
-  const activeToken = API.getToken() || token;
-  const userEmail = activeUser?.email ? activeUser.email.toLowerCase() : "";
+  const activeUser = await resolveUserSession();
+  const userEmail = (activeUser?.email || "").toLowerCase();
+
+  // 1. Check if user typed an order ID into search input or query param
+  const urlParams = new URLSearchParams(window.location.search);
+  const queryOrderId = urlParams.get("orderId");
+  const searchInput = document.getElementById("search-order-id");
+  const targetId = (queryOrderId || (searchInput ? searchInput.value.trim() : null) || "").trim();
+
+  // Guard: Not logged in and no specific orderId requested
+  if (!activeUser && !targetId) {
+    const noOrdersContainer = document.getElementById("no-orders-container");
+    const orderDetailsContainer = document.getElementById("order-details-container");
+    const progressBoxContainer = document.getElementById("progress-box-container");
+
+    if (orderDetailsContainer) orderDetailsContainer.style.display = "none";
+    if (progressBoxContainer) progressBoxContainer.style.display = "none";
+    if (noOrdersContainer) {
+      noOrdersContainer.style.display = "block";
+      noOrdersContainer.innerHTML = `
+        <div style="text-align:center; padding: 40px 20px;">
+          <h2 style="color:#fbbf24; margin-bottom:12px;">Track Your Order</h2>
+          <p style="color:#cbd5e1; max-width:480px; margin:0 auto 20px auto;">
+            Please sign in to view your orders automatically, or enter your Order ID in the search box above.
+          </p>
+          <a href="login.html?redirect=track-order.html" class="collection-btn" style="display:inline-block; padding:10px 24px;">Sign In with Google</a>
+        </div>
+      `;
+    }
+    return;
+  }
 
   // Get raw local data
   const rawLastOrder = JSON.parse(localStorage.getItem("lastOrder"));
@@ -27,10 +87,47 @@ async function loadOrderData() {
     return userEmail && oEmail && oEmail === userEmail;
   });
 
-  const lastOrder = (rawLastOrder && (rawLastOrder.email || rawLastOrder.customerEmail || "").toLowerCase() === userEmail) ? rawLastOrder : null;
+  const lastOrder = (rawLastOrder && (!userEmail || (rawLastOrder.email || rawLastOrder.customerEmail || "").toLowerCase() === userEmail)) ? rawLastOrder : null;
 
-  // Try fetching latest server orders for this user
+  // 2. Fetch from Supabase Orders table
+  let supabaseOrders = [];
+  if (window.supabaseClient) {
+    try {
+      let sbQuery = window.supabaseClient.from('orders').select('*');
+      if (targetId) {
+        sbQuery = sbQuery.or(`order_number.eq.${targetId},id.eq.${targetId}`);
+      } else if (userEmail) {
+        sbQuery = sbQuery.eq('customer_email', userEmail);
+      }
+      const { data: sbData, error: sbErr } = await sbQuery.order('created_at', { ascending: false });
+      if (!sbErr && Array.isArray(sbData)) {
+        supabaseOrders = sbData.map(s => ({
+          id: s.order_number || s.id,
+          orderId: s.order_number || s.id,
+          _id: s.id,
+          orderDate: s.created_at,
+          status: s.order_status || 'Pending',
+          total: s.total,
+          grandTotal: s.total,
+          customer: {
+            name: s.customer_name || activeUser?.name || 'Customer',
+            email: s.customer_email || userEmail,
+            phone: s.customer_phone || 'N/A',
+            address: s.shipping_address?.street || '',
+            city: s.shipping_address?.city || '',
+            state: s.shipping_address?.state || '',
+            pincode: s.shipping_address?.postalCode || ''
+          }
+        }));
+      }
+    } catch (e) {
+      console.warn('[Track Order] Supabase orders query error:', e.message);
+    }
+  }
+
+  // 3. Try fetching latest server orders for this user from REST API fallback
   let serverOrders = [];
+  const activeToken = window.API ? API.getToken() : null;
   if (activeToken || userEmail) {
     try {
       const endpoint = userEmail ? `/orders/my-orders?email=${encodeURIComponent(userEmail)}` : '/orders/my-orders';
@@ -39,24 +136,21 @@ async function loadOrderData() {
         serverOrders = res.data.orders;
       }
     } catch (err) {
-      console.warn("Using local orders list for tracking");
+      // Backend offline notice handled silently
     }
   }
-
-  // 1. Check if user typed an order ID into search input or query param
-  const urlParams = new URLSearchParams(window.location.search);
-  const queryOrderId = urlParams.get("orderId");
-  const searchInput = document.getElementById("search-order-id");
-  const targetId = queryOrderId || (searchInput ? searchInput.value.trim() : null);
 
   currentOrder = null;
 
   if (targetId) {
-    // Find matching order in local storage or server orders
+    // Find matching order in Supabase, local storage or server orders
+    const matchedSb = supabaseOrders.find(o => String(o.id) === String(targetId) || String(o.orderId) === String(targetId));
     const matchedLocal = rawAllLocalOrders.find(o => String(o.id) === String(targetId) || String(o.orderId) === String(targetId) || String(o._id) === String(targetId));
     const matchedServer = serverOrders.find(o => String(o.orderNumber) === String(targetId) || String(o.orderId) === String(targetId) || String(o._id) === String(targetId));
 
-    if (matchedLocal) {
+    if (matchedSb) {
+      currentOrder = matchedSb;
+    } else if (matchedLocal) {
       currentOrder = matchedLocal;
     } else if (matchedServer) {
       currentOrder = {
@@ -76,9 +170,11 @@ async function loadOrderData() {
     }
   }
 
-  // Fallback to user's lastOrder, first user local order, or first server order if no specific ID requested
+  // Fallback to user's first Supabase order, lastOrder, or first local order
   if (!currentOrder && !targetId) {
-    if (lastOrder) {
+    if (supabaseOrders.length > 0) {
+      currentOrder = supabaseOrders[0];
+    } else if (lastOrder) {
       const matchingLocal = allLocalOrders.find(o => String(o.id) === String(lastOrder.id) || String(o.orderId) === String(lastOrder.orderId));
       currentOrder = matchingLocal || lastOrder;
     } else if (allLocalOrders.length > 0) {
@@ -111,7 +207,18 @@ async function loadOrderData() {
       if (typeof showToast === "function") showToast(`Order #${targetId} not found.`);
       else alert(`Order #${targetId} not found.`);
     }
-    if (noOrdersContainer) noOrdersContainer.style.display = "block";
+    if (noOrdersContainer) {
+      noOrdersContainer.style.display = "block";
+      noOrdersContainer.innerHTML = `
+        <div style="text-align:center; padding: 40px 20px;">
+          <h2 style="color:#fbbf24; margin-bottom:12px;">📦 No Orders Found</h2>
+          <p style="color:#cbd5e1; max-width:480px; margin:0 auto 20px auto;">
+            ${targetId ? `We couldn't find order #${targetId}. Please check the Order ID and try again.` : `You don't have any placed orders yet.`}
+          </p>
+          <a href="collection.html" class="collection-btn" style="display:inline-block; padding:10px 24px;">Explore Collection</a>
+        </div>
+      `;
+    }
     if (orderDetailsContainer) orderDetailsContainer.style.display = "none";
     if (progressBoxContainer) progressBoxContainer.style.display = "none";
     return;
