@@ -164,7 +164,8 @@ async function handleOAuth(provider) {
     showError('Google sign-in requires an HTTP server. Please use a local server (e.g. Live Server).');
     return;
   }
-  const redirectTo = SupabaseAuth.buildRedirectUrl('/frontend/index.html');
+  const redirectTo = SupabaseAuth.buildRedirectUrl('/index.html')
+    || `${window.location.origin}/index.html`;
   if (!redirectTo) {
     showError(
       'Google sign-in requires an HTTP server. ' +

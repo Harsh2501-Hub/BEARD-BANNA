@@ -338,7 +338,7 @@ const SupabaseAuth = (() => {
       const client = getClient();
 
       // Build redirect URL — works for both local HTTP dev and production HTTPS
-      const redirectTo = buildRedirectUrl('/frontend/index.html');
+      const redirectTo = buildRedirectUrl('/index.html') || `${window.location.origin}/index.html`;
 
       if (!redirectTo) {
         return {
