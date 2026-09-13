@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile | BEARD BANNA</title>
+    <meta name="description" content="Manage your BEARD BANNA account — update your name, phone and password.">
+
+    <!-- Google Fonts for Classic & Royal Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">`n    <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+
+    <header>
+        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <p>HONOR • HISTORY • HERITAGE</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collection</a>
+        <span id="user-area"></span>
+        <a href="wishlist.html">❤️ Wishlist <span id="wishlist-count">0</span></a>
+        <a href="cart.html">🛒 Cart <span id="cart-count">0</span></a>
+    </nav>
+
+    <section class="section">
+        <div style="max-width: 560px; margin: 0 auto; padding: 0 16px;">
+
+            <!-- Profile Avatar -->
+            <div class="profile-avatar-wrapper">
+                <div class="profile-avatar" id="profile-avatar-initials">👤</div>
+                <div class="profile-avatar-info">
+                    <p class="profile-avatar-label">Member since</p>
+                    <p id="profile-joined" class="profile-avatar-date">—</p>
+                </div>
+            </div>
+
+            <!-- ── Profile Info Form ────────────────────── -->
+            <div class="login-card" style="margin: 20px auto;">
+                <h1 style="font-size: 1.5rem; margin-bottom: 20px;">My Profile</h1>
+
+                <div id="profile-error" class="auth-error" style="display:none;"></div>
+                <div id="profile-success" class="auth-success" style="display:none;"></div>
+
+                <form id="profile-form">
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; font-size:0.85rem; color:#fbbf24; font-weight:700; margin-bottom:6px;">
+                            Full Name
+                        </label>
+                        <input type="text" id="profile-name" placeholder="Full Name" style="width: 100%;"
+                            autocomplete="name">
+                    </div>
+
+                    <div style="margin-bottom: 16px;">
+                        <label style="display:block; font-size:0.85rem; color:#fbbf24; font-weight:700; margin-bottom:6px;">
+                            Email Address
+                            <span style="color:#94a3b8; font-size:0.75rem; font-weight:400; margin-left:6px;">(cannot be changed here)</span>
+                        </label>
+                        <input type="email" id="profile-email" placeholder="Email Address" style="width: 100%;"
+                            autocomplete="email">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label style="display:block; font-size:0.85rem; color:#fbbf24; font-weight:700; margin-bottom:6px;">
+                            Phone Number
+                        </label>
+                        <input type="tel" id="profile-phone" placeholder="Phone Number" style="width: 100%;"
+                            autocomplete="tel">
+                    </div>
+
+                    <button type="submit" class="checkout-btn" style="width: 100%;">
+                        Save Changes
+                    </button>
+                </form>
+            </div>
+
+            <!-- ── Change Password Section ────────────────────── -->
+            <div class="login-card" style="margin: 20px auto;">
+                <h2 style="font-size: 1.2rem; margin-bottom: 8px; color: #fbbf24;">🔑 Change Password</h2>
+                <p style="color: #94a3b8; font-size: 0.9rem; margin-bottom: 20px;">
+                    Update your account password below.
+                </p>
+
+                <div id="password-error" class="auth-error" style="display:none;"></div>
+                <div id="password-success" class="auth-success" style="display:none;"></div>
+
+                <form id="change-password-form">
+                    <div class="input-wrapper password-wrapper" style="position: relative; margin-bottom: 16px;">
+                        <input type="password" id="new-password" placeholder="New Password (min. 6 characters)"
+                            required style="width: 100%;" autocomplete="new-password">
+                        <button type="button" class="eye-toggle-btn"
+                            onclick="togglePasswordVisibility('new-password', this)"
+                            title="Show/Hide Password"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #fbbf24;">
+                            👁️
+                        </button>
+                    </div>
+
+                    <div class="input-wrapper password-wrapper" style="position: relative; margin-bottom: 20px;">
+                        <input type="password" id="confirm-new-password" placeholder="Confirm New Password"
+                            required style="width: 100%;" autocomplete="new-password">
+                        <button type="button" class="eye-toggle-btn"
+                            onclick="togglePasswordVisibility('confirm-new-password', this)"
+                            title="Show/Hide Password"
+                            style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #fbbf24;">
+                            👁️
+                        </button>
+                    </div>
+
+                    <button type="submit" class="checkout-btn" style="width: 100%;">
+                        Update Password
+                    </button>
+                </form>
+            </div>
+
+        </div>
+    </section>
+
+    <footer>
+        <p style="margin: 0; padding: 10px 0;"><a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed &amp; Maintained by Himanshu ↗</a></p>
+    </footer>
+
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/wishlist.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/profile.js"></script>
+
+</body>
+
+</html>

@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Track Order | BEARD BANNA</title>
+
+    <!-- Google Fonts for Classic & Royal Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">`n    <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+
+    <header>
+        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <p>HONOR • HISTORY • HERITAGE</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collection</a>
+        <span id="user-area"></span>
+        <a href="wishlist.html">❤️ Wishlist <span id="wishlist-count">0</span></a>
+        <a href="cart.html">🛒 Cart <span id="cart-count">0</span></a>
+    </nav>
+
+    <section class="section">
+        <div class="tracking-container auth-card" style="max-width: 900px; margin: 30px auto; padding: 30px;">
+            <h1>Track Your Order</h1>
+
+            <!-- Order Search Box -->
+            <div style="margin: 20px 0; text-align:center; display:flex; justify-content:center; gap:10px;">
+                <input type="text" id="search-order-id" placeholder="Enter Order ID (e.g. BB-2026-1001)" style="padding:12px 16px; border:1px solid #fbbf24; border-radius:8px; max-width:360px; width:100%; font-size:0.95rem;">
+                <button onclick="loadOrderData()" class="checkout-btn">🔍 Track</button>
+            </div>
+
+            <!-- No Orders Found Container (For Fresh Users) -->
+            <div id="no-orders-container" style="display: none; text-align: center; padding: 40px 20px;">
+                <div style="font-size: 3.5rem; margin-bottom: 15px;">📦</div>
+                <h2 style="color: #fbbf24; font-family: 'Cinzel', serif; font-size: 1.6rem; margin-bottom: 10px;">No Orders Placed Yet</h2>
+                <p style="color: #cbd5e1; font-size: 1rem; max-width: 450px; margin: 0 auto 25px auto;">
+                    Welcome to BEARD BANNA! You haven't placed any orders with this account yet. Explore our royal collection and craft your legacy.
+                </p>
+                <a href="collection.html" class="checkout-btn" style="text-decoration: none; display: inline-block; padding: 12px 28px;">👑 Explore Royal Collection</a>
+            </div>
+
+            <!-- Active Order Details Container -->
+            <div id="order-details-container">
+                <div class="tracking-header" style="background: rgba(15, 23, 42, 0.8); padding: 18px; border-radius: 10px; border: 1px solid rgba(251,191,36,0.2); margin-bottom: 25px;">
+                    <p><b>Order ID :</b> <span id="track-order-id" style="color: #fbbf24; font-weight: 700;"></span></p>
+                    <p><b>Order Date :</b> <span id="track-order-date"></span></p>
+                    <p><b>Estimated Delivery :</b> <span id="track-delivery-date" style="color: #22c55e; font-weight: 700;"></span></p>
+                </div>
+
+                <div class="tracking-timeline">
+                    <div class="tracking-step active" id="step1">
+                        <div class="tracking-icon">✔</div>
+                        <div class="tracking-content">
+                            <h3>Order Placed</h3>
+                            <p>Your order has been received.</p>
+                        </div>
+                    </div>
+
+                    <div class="tracking-step" id="step2">
+                        <div class="tracking-icon">📦</div>
+                        <div class="tracking-content">
+                            <h3>Processing</h3>
+                            <p>Your items are being packed & quality checked.</p>
+                        </div>
+                    </div>
+
+                    <div class="tracking-step" id="step3">
+                        <div class="tracking-icon">🚚</div>
+                        <div class="tracking-content">
+                            <h3>Shipped</h3>
+                            <p>In transit with BEARD BANNA Express.</p>
+                        </div>
+                    </div>
+
+                    <div class="tracking-step" id="step4">
+                        <div class="tracking-icon">🎉</div>
+                        <div class="tracking-content">
+                            <h3>Delivered</h3>
+                            <p>Package delivered successfully.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- LIVE MAP SIMULATION -->
+                <div class="live-tracking" style="margin-top: 30px; background: rgba(15, 23, 42, 0.8); padding: 20px; border-radius: 12px; border: 1px solid rgba(251,191,36,0.2);">
+                    <h2 style="color: #fbbf24; margin-bottom: 15px;">Live Courier Simulation</h2>
+
+                    <div class="delivery-road" style="background: #1e293b; height: 10px; border-radius: 5px; position: relative; margin: 25px 0;">
+                        <div class="delivery-van" style="position: absolute; top: -18px; left: 10%; font-size: 1.8rem; transition: left 1s ease;">🚚</div>
+                    </div>
+
+                    <div class="delivery-info">
+                        <p><b>Courier :</b> BEARD BANNA Royal Express</p>
+                        <p><b>Estimated Arrival :</b> <span id="arrival-time" style="color: #fbbf24; font-weight: 700;">Calculating...</span></p>
+                        <p id="delivery-message" style="color: #cbd5e1;">Your package is being prepared.</p>
+                    </div>
+                </div>
+            </div>
+
+            <div style="display:flex; justify-content:center; gap:15px; margin-top:25px;">
+                <a href="index.html" class="collection-btn">Home</a>
+                <a href="collection.html" class="collection-btn">Continue Shopping</a>
+            </div>
+        </div>
+
+        <div id="progress-box-container" class="progress-box auth-card" style="max-width:900px; margin:20px auto; padding:20px;">
+            <div class="progress-header" style="display:flex; justify-content:space-between; align-items:center;">
+                <h3>Order Progress</h3>
+                <span id="progress-percent" style="color:#fbbf24; font-weight:800; font-size:1.2rem;">0%</span>
+            </div>
+            <div class="progress-bar" style="background:#1e293b; height:12px; border-radius:6px; overflow:hidden; margin:12px 0;">
+                <div id="progress-fill" style="background:linear-gradient(90deg, #d97706, #fbbf24); height:100%; width:0%; transition:width 0.5s ease;"></div>
+            </div>
+            <p id="current-status" style="color:#cbd5e1; font-weight:600;">Current Status : Loading...</p>
+        </div>
+    </section>
+
+    <footer>
+        <p style="margin: 0; padding: 10px 0;"><a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed & Maintained by Himanshu ↗</a></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/wishlist.js"></script>
+    <!-- Supabase Auth -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/track-order.js"></script>
+</body>
+
+</html>

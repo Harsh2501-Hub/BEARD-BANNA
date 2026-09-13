@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Management | BEARD BANNA Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-dashboard">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>👑 BEARD BANNA</h2>
+                <span>Admin Panel</span>
+            </div>
+            <nav>
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="products.html" class="active">📦 Products</a>
+                <a href="categories.html">📂 Categories</a>
+                <a href="orders.html">🛒 Orders</a>
+                <a href="customers.html">👥 Customers</a>
+                <a href="inquiries.html">📩 Inquiries</a>
+                <a href="reviews.html">💬 Reviews</a>
+                <a href="analytics.html">📈 Analytics</a>
+                <a href="settings.html">⚙ Settings</a>
+            </nav>
+            <button id="logout-btn">🚪 Logout</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <div class="products-header">
+                <h1>📦 Product Catalog Management</h1>
+                <span id="product-count">0 Products</span>
+            </div>
+
+            <!-- Products Table + Form Container -->
+            <div class="products-container">
+                <!-- Product Table -->
+                <section class="products-table">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Images (3 Angles)</th>
+                                <th>Name & Category</th>
+                                <th>Price</th>
+                                <th>Rating</th>
+                                <th>Stock Inventory</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="products-table-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <!-- Add/Edit Product Form -->
+                <aside class="product-form">
+                    <h2 id="form-title">➕ Add Product</h2>
+                    <form id="product-form">
+                        <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Product Name:</label>
+                        <input type="text" id="product-name" placeholder="e.g. Royal Warrior Tee" required>
+
+                        <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Price (₹):</label>
+                        <input type="number" id="product-price" placeholder="e.g. 999" required>
+
+                        <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Category:</label>
+                        <select id="product-category" required>
+                            <option value="">Select Category</option>
+                            <option value="Round Neck T-Shirts">Round Neck T-Shirts</option>
+                            <option value="Collar T-Shirts">Collar T-Shirts</option>
+                            <option value="Hoodies">Hoodies</option>
+                            <option value="Jeans & Denim">Jeans & Denim</option>
+                        </select>
+
+                        <!-- PER-SIZE STOCK INVENTORY INPUTS -->
+                        <label style="display:block; font-size:0.88rem; margin-top:14px; color:#fbbf24; font-weight:700;">
+                            📏 Stock Inventory By Size:
+                        </label>
+                        <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 8px 0;">Enter available quantity for each size.</p>
+
+                        <div class="size-stock-grid" style="display:grid; grid-template-columns: repeat(5, 1fr); gap:6px; background:rgba(15, 23, 42, 0.8); padding:10px; border-radius:8px; border:1px solid #334155;">
+                            <div style="text-align:center;">
+                                <label style="font-weight:700; color:#e2e8f0; font-size:0.8rem; display:block;">S</label>
+                                <input type="number" id="size-stock-S" min="0" value="0" style="width:100%; text-align:center; padding:5px; margin-top:4px; font-weight:600;">
+                            </div>
+                            <div style="text-align:center;">
+                                <label style="font-weight:700; color:#e2e8f0; font-size:0.8rem; display:block;">M</label>
+                                <input type="number" id="size-stock-M" min="0" value="0" style="width:100%; text-align:center; padding:5px; margin-top:4px; font-weight:600;">
+                            </div>
+                            <div style="text-align:center;">
+                                <label style="font-weight:700; color:#e2e8f0; font-size:0.8rem; display:block;">L</label>
+                                <input type="number" id="size-stock-L" min="0" value="0" style="width:100%; text-align:center; padding:5px; margin-top:4px; font-weight:600;">
+                            </div>
+                            <div style="text-align:center;">
+                                <label style="font-weight:700; color:#e2e8f0; font-size:0.8rem; display:block;">XL</label>
+                                <input type="number" id="size-stock-XL" min="0" value="0" style="width:100%; text-align:center; padding:5px; margin-top:4px; font-weight:600;">
+                            </div>
+                            <div style="text-align:center;">
+                                <label style="font-weight:700; color:#e2e8f0; font-size:0.8rem; display:block;">XXL</label>
+                                <input type="number" id="size-stock-XXL" min="0" value="0" style="width:100%; text-align:center; padding:5px; margin-top:4px; font-weight:600;">
+                            </div>
+                        </div>
+
+                        <!-- 3 MULTI-ANGLE IMAGE INPUTS -->
+                        <div style="margin-top:16px; background:rgba(30, 41, 59, 0.6); padding:12px; border-radius:8px; border:1px solid #334155;">
+                            <label style="display:block; font-size:0.88rem; color:#38bdf8; font-weight:700; margin-bottom:8px;">
+                                📸 3 Product View Images (Front, Back & Side):
+                            </label>
+
+                            <!-- Front Image -->
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.8rem; color:#e2e8f0; font-weight:600;">1. Front View (Main Image):</label>
+                                <input type="file" id="product-image-file-front" accept="image/*" style="font-size:0.75rem;">
+                                <input type="text" id="product-image-url-front" placeholder="URL e.g. images/Product 1.jpeg" style="margin-top:4px;">
+                            </div>
+
+                            <!-- Back Image -->
+                            <div style="margin-bottom:10px;">
+                                <label style="display:block; font-size:0.8rem; color:#e2e8f0; font-weight:600;">2. Back View (Back Details):</label>
+                                <input type="file" id="product-image-file-back" accept="image/*" style="font-size:0.75rem;">
+                                <input type="text" id="product-image-url-back" placeholder="URL e.g. images/Product 2.jpeg" style="margin-top:4px;">
+                            </div>
+
+                            <!-- Side Image -->
+                            <div>
+                                <label style="display:block; font-size:0.8rem; color:#e2e8f0; font-weight:600;">3. Side View (Profile & Sleeve):</label>
+                                <input type="file" id="product-image-file-side" accept="image/*" style="font-size:0.75rem;">
+                                <input type="text" id="product-image-url-side" placeholder="URL e.g. images/Product 3.jpeg" style="margin-top:4px;">
+                            </div>
+                        </div>
+
+                        <label style="display:block; font-size:0.85rem; margin-top:12px; color:#94a3b8; font-weight:600;">Product Description:</label>
+                        <textarea id="product-description" rows="3" placeholder="Product description..."></textarea>
+
+                        <button type="submit" style="margin-top:15px; width:100%;">💾 Save Product</button>
+                    </form>
+                </aside>
+
+                <!-- Live Preview Card with 3-Angle Toggle -->
+                <aside class="product-preview">
+                    <h2>👀 Live Multi-Angle Preview</h2>
+                    <div class="preview-card">
+                        <img id="preview-image" src="images/Product 1.jpeg" alt="Preview" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+                        
+                        <!-- Preview Angle Selector Tabs -->
+                        <div style="display:flex; justify-content:center; gap:6px; margin:10px 0;">
+                            <button type="button" class="preview-angle-btn active" onclick="switchPreviewAngle('front', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; font-weight:700; cursor:pointer;">📸 Front</button>
+                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('back', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">🔄 Back</button>
+                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('side', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">📐 Side</button>
+                        </div>
+
+                        <h3 id="preview-name">Product Name</h3>
+                        <h4 id="preview-price">₹0</h4>
+                        <p id="preview-category">Category</p>
+                        <p id="preview-description">Product description will appear here.</p>
+                    </div>
+                </aside>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/products.js"></script>
+</body>
+
+</html>

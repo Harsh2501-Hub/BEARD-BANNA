@@ -1,0 +1,568 @@
+/* ============================================================
+   BEARD BANNA — SUPABASE AUTH COMPONENTS
+   Separate stylesheet for auth UI.
+   All styles match the existing Rajputana royal theme.
+   Background: #1a0205 | Primary: #520F16 | Gold: #d4af37/#fbbf24
+============================================================ */
+
+/* ── Auth Card / Login Card ───────────────────────────────── */
+
+.login-card {
+    background: linear-gradient(135deg, rgba(82, 15, 22, 0.55) 0%, rgba(36, 5, 10, 0.75) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.25);
+    border-radius: 18px;
+    padding: 40px 36px;
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    box-shadow:
+        0 20px 60px rgba(0, 0, 0, 0.5),
+        inset 0 1px 0 rgba(255, 215, 0, 0.08);
+    animation: cardFadeIn 0.4s ease;
+}
+
+@keyframes cardFadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.login-card h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    color: #fbbf24;
+    margin-bottom: 12px;
+    letter-spacing: 1px;
+    text-shadow: 0 0 20px rgba(251, 191, 36, 0.3);
+}
+
+.login-card h2 {
+    font-family: 'Cinzel', serif;
+    color: #fbbf24;
+}
+
+/* Input fields inside auth cards */
+.login-card input[type="email"],
+.login-card input[type="password"],
+.login-card input[type="text"],
+.login-card input[type="tel"] {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 10px;
+    color: #fff8eb;
+    padding: 14px 16px;
+    font-size: 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: border-color 0.25s ease, box-shadow 0.25s ease;
+    outline: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.login-card input:focus {
+    border-color: #fbbf24;
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.15);
+    background: rgba(255, 255, 255, 0.09);
+}
+
+.login-card input::placeholder {
+    color: #6b7280;
+}
+
+.login-card input[readonly] {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* ── Error & Success Messages ─────────────────────────────── */
+
+.auth-error {
+    background: rgba(185, 28, 28, 0.25);
+    border: 1px solid rgba(239, 68, 68, 0.45);
+    border-radius: 10px;
+    color: #fca5a5;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    line-height: 1.5;
+    animation: errorShake 0.35s ease;
+}
+
+@keyframes errorShake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60%  { transform: translateX(-6px); }
+    40%, 80%  { transform: translateX(6px); }
+}
+
+.auth-success {
+    background: rgba(5, 150, 105, 0.2);
+    border: 1px solid rgba(52, 211, 153, 0.4);
+    border-radius: 10px;
+    color: #6ee7b7;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    line-height: 1.6;
+    animation: cardFadeIn 0.3s ease;
+}
+
+/* ── Auth Divider ("or") ──────────────────────────────────── */
+
+.auth-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 20px 0;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: rgba(212, 175, 55, 0.2);
+}
+
+/* ── Google OAuth Button ──────────────────────────────────── */
+
+.google-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    width: 100%;
+    padding: 13px 20px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    color: #fff8eb;
+    font-size: 1rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    letter-spacing: 0.3px;
+}
+
+.google-btn:hover {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+.google-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.google-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: white;
+    border-radius: 50%;
+    color: #4285F4;
+    font-size: 0.85rem;
+    font-weight: 800;
+    flex-shrink: 0;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+/* ── User Dropdown (Navbar) ───────────────────────────────── */
+
+.user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.user-toggle {
+    background: rgba(212, 175, 55, 0.15);
+    border: 1px solid rgba(212, 175, 55, 0.4);
+    border-radius: 30px;
+    color: #fbbf24;
+    padding: 8px 18px;
+    font-size: 0.9rem;
+    font-weight: 700;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    letter-spacing: 0.2px;
+}
+
+.user-toggle:hover,
+.user-toggle.active {
+    background: rgba(212, 175, 55, 0.3);
+    border-color: #fbbf24;
+    box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    min-width: 190px;
+    background: linear-gradient(135deg, #1f0306 0%, #36050a 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 12px;
+    padding: 8px 0;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    opacity: 0;
+    transform: translateY(-8px);
+    pointer-events: none;
+    transition: all 0.2s ease;
+    z-index: 10000;
+}
+
+.dropdown-menu.show-menu {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: all;
+}
+
+.dropdown-menu a,
+.dropdown-menu button {
+    display: block;
+    width: 100%;
+    padding: 11px 20px;
+    color: #fff8eb;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 500;
+    text-align: left;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+    box-sizing: border-box;
+}
+
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+    background: rgba(212, 175, 55, 0.12);
+    color: #fbbf24;
+}
+
+/* ── Navbar Login / Register Buttons ──────────────────────── */
+
+.login-btn {
+    display: inline-block;
+    padding: 7px 16px;
+    border-radius: 20px;
+    color: #fbbf24 !important;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    border: 1px solid rgba(251, 191, 36, 0.4);
+    transition: all 0.2s ease;
+    margin: 0 4px;
+}
+
+.login-btn:hover {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: #fbbf24;
+}
+
+.register-btn {
+    display: inline-block;
+    padding: 7px 16px;
+    border-radius: 20px;
+    background: #fbbf24;
+    color: #1a0205 !important;
+    font-weight: 700;
+    font-size: 0.9rem;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    margin: 0 4px;
+}
+
+.register-btn:hover {
+    background: #d4af37;
+    transform: translateY(-1px);
+}
+
+/* ── Profile Avatar ───────────────────────────────────────── */
+
+.profile-avatar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin: 20px auto;
+    max-width: 560px;
+    padding: 20px 24px;
+    background: linear-gradient(135deg, rgba(82, 15, 22, 0.4) 0%, rgba(36, 5, 10, 0.6) 100%);
+    border: 1px solid rgba(212, 175, 55, 0.2);
+    border-radius: 14px;
+}
+
+.profile-avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #520F16, #8b1a25);
+    border: 2px solid rgba(212, 175, 55, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.6rem;
+    font-weight: 800;
+    font-family: 'Cinzel', serif;
+    color: #fbbf24;
+    text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+    flex-shrink: 0;
+    letter-spacing: 1px;
+}
+
+.profile-avatar-label {
+    color: #94a3b8;
+    font-size: 0.8rem;
+    margin: 0 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.profile-avatar-date {
+    color: #fbbf24;
+    font-size: 0.95rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+/* ── Auth Icon (Page decorative emoji) ────────────────────── */
+
+.auth-icon {
+    font-size: 3rem;
+    margin-bottom: 16px;
+    display: block;
+    text-align: center;
+    animation: iconPulse 2s ease-in-out infinite;
+}
+
+@keyframes iconPulse {
+    0%, 100% { transform: scale(1); }
+    50%       { transform: scale(1.08); }
+}
+
+/* ── Loading Spinner ──────────────────────────────────────── */
+
+.auth-spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(212, 175, 55, 0.2);
+    border-top-color: #fbbf24;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ── Mobile Responsiveness (Auth Components) ──────────────── */
+
+@media (max-width: 520px) {
+    .login-card {
+        padding: 28px 20px;
+        margin: 16px !important;
+        border-radius: 14px;
+    }
+
+    .login-card h1 {
+        font-size: 1.5rem;
+    }
+
+    .user-toggle {
+        padding: 7px 12px;
+        font-size: 0.82rem;
+    }
+
+    .dropdown-menu {
+        right: auto;
+        left: 50%;
+        transform: translateX(-50%) translateY(-8px);
+        min-width: 170px;
+    }
+
+    .dropdown-menu.show-menu {
+        transform: translateX(-50%) translateY(0);
+    }
+
+    .profile-avatar-wrapper {
+        flex-direction: column;
+        text-align: center;
+        padding: 16px;
+    }
+
+    .google-btn {
+        font-size: 0.9rem;
+        padding: 12px 16px;
+    }
+
+    .login-btn,
+    .register-btn {
+        padding: 6px 10px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 380px) {
+    .login-card {
+        padding: 24px 14px;
+    }
+}
+
+/* ============================================================
+   NAVBAR — USER AREA (Auth State)
+   Shows Login/Register when logged out.
+   Shows username dropdown when logged in.
+============================================================ */
+
+/* ── Logged-out: Login & Register buttons ───────────────── */
+.login-btn,
+.register-btn {
+    display: inline-block;
+    padding: 7px 18px;
+    border-radius: 30px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    letter-spacing: 0.4px;
+}
+
+.login-btn {
+    color: #fbbf24;
+    border: 1.5px solid rgba(251, 191, 36, 0.5);
+    background: transparent;
+}
+.login-btn:hover {
+    background: rgba(251, 191, 36, 0.12);
+    border-color: #fbbf24;
+    color: #ffd700;
+    transform: translateY(-1px);
+}
+
+.register-btn {
+    color: #0f172a;
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    border: 1.5px solid transparent;
+    margin-left: 8px;
+}
+.register-btn:hover {
+    background: linear-gradient(135deg, #ffd700, #f59e0b);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 14px rgba(251, 191, 36, 0.35);
+}
+
+/* ── Logged-in: User dropdown container ─────────────────── */
+.user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+/* Toggle button (shows username) */
+.user-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1.5px solid rgba(251, 191, 36, 0.45);
+    border-radius: 30px;
+    color: #fbbf24;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+    letter-spacing: 0.3px;
+}
+.user-toggle:hover,
+.user-toggle.active {
+    background: rgba(251, 191, 36, 0.2);
+    border-color: #fbbf24;
+    box-shadow: 0 0 12px rgba(251, 191, 36, 0.2);
+    color: #ffd700;
+}
+
+/* ── Dropdown menu ───────────────────────────────────────── */
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    min-width: 190px;
+    background: linear-gradient(160deg, #1c0608 0%, #2a080d 100%);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 14px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(251, 191, 36, 0.06);
+    overflow: hidden;
+    z-index: 9999;
+    animation: dropdownFade 0.2s ease;
+}
+
+.dropdown-menu.show-menu {
+    display: block;
+}
+
+@keyframes dropdownFade {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Menu links */
+.dropdown-menu a,
+.dropdown-menu button {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 18px;
+    color: #e2d7c5;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    text-decoration: none;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid rgba(212, 175, 55, 0.08);
+    cursor: pointer;
+    transition: background 0.18s ease, color 0.18s ease, padding-left 0.18s ease;
+    text-align: left;
+    letter-spacing: 0.2px;
+}
+.dropdown-menu a:last-child,
+.dropdown-menu button:last-child {
+    border-bottom: none;
+}
+.dropdown-menu a:hover,
+.dropdown-menu button:hover {
+    background: rgba(251, 191, 36, 0.1);
+    color: #fbbf24;
+    padding-left: 24px;
+}
+
+/* ── Responsive: stack on small screens ─────────────────── */
+@media (max-width: 500px) {
+    .user-toggle {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+    .login-btn,
+    .register-btn {
+        padding: 6px 12px;
+        font-size: 0.78rem;
+    }
+    .register-btn {
+        margin-left: 5px;
+    }
+}
+

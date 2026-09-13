@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Management | BEARD BANNA Admin</title>
+    <link rel="stylesheet" href="css/admin.css">
+</head>
+
+<body class="admin-dashboard">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>👑 BEARD BANNA</h2>
+                <span>Admin Panel</span>
+            </div>
+            <nav>
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="products.html">📦 Products</a>
+                <a href="categories.html">📂 Categories</a>
+                <a href="orders.html" class="active">🛒 Orders</a>
+                <a href="customers.html">👥 Customers</a>
+                <a href="inquiries.html">📩 Inquiries</a>
+                <a href="analytics.html">📈 Analytics</a>
+                <a href="settings.html">⚙ Settings</a>
+            </nav>
+            <button id="logout-btn">🚪 Logout</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <div class="orders-header">
+                <section class="order-stats">
+                    <div class="stat-card">
+                        <h3>Total Orders</h3>
+                        <h2 id="stat-total-orders">0</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Pending</h3>
+                        <h2 id="stat-pending-orders">0</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Shipped / Delivered</h3>
+                        <h2 id="stat-shipped-orders">0</h2>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total Revenue</h3>
+                        <h2 id="stat-total-revenue">₹0</h2>
+                    </div>
+                </section>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
+                    <div>
+                        <h1>🛒 Order Management</h1>
+                        <p>Manage customer orders, update status, cancel orders (auto-deducts revenue), and clear test
+                            data.</p>
+                    </div>
+                    <button id="clear-orders-btn" onclick="clearAllOrders()"
+                        style="background:#dc2626; color:white; padding:10px 18px; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
+                        🗑️ Reset All Test Orders
+                    </button>
+                </div>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="orders-toolbar" style="margin-top:20px;">
+                <input type="text" id="order-search" placeholder="🔍 Search Order ID or Customer">
+                <select id="status-filter">
+                    <option value="all">📋 All Orders</option>
+                    <option value="Pending">🟡 Pending</option>
+                    <option value="Confirmed">🔵 Confirmed</option>
+                    <option value="Packed">🟣 Packed</option>
+                    <option value="Shipped">🟢 Shipped</option>
+                    <option value="Delivered">✅ Delivered</option>
+                    <option value="Cancelled">🔴 Cancelled</option>
+                </select>
+            </div>
+
+            <!-- Orders Table -->
+            <div class="orders-table-container">
+                <table class="orders-table">
+                    <thead>
+                        <tr>
+                            <th>Order ID</th>
+                            <th>Customer</th>
+                            <th>Total Amount</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="orders-body">
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/orders.js"></script>
+
+    <!-- ORDER DETAILS MODAL -->
+    <div id="order-modal" class="modal">
+        <div class="modal-content">
+            <span id="close-modal" class="close-btn" onclick="closeOrderModal()">&times;</span>
+            <div id="order-details"></div>
+        </div>
+    </div>
+</body>
+
+</html>

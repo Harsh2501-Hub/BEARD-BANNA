@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Categories | BEARD BANNA</title>
+
+    <link rel="stylesheet" href="css/admin.css">
+
+</head>
+
+<body class="admin-dashboard">
+
+    <div class="admin-container">
+
+        <!-- Sidebar -->
+
+        <aside class="sidebar">
+
+            <div class="logo">
+
+                <h2>👑 BEARD BANNA</h2>
+
+                <span>Admin Panel</span>
+
+            </div>
+
+            <nav>
+
+                <a href="dashboard.html">
+
+                    📊 Dashboard
+
+                </a>
+
+                <a href="products.html">
+
+                    📦 Products
+
+                </a>
+
+                <a href="categories.html" class="active">
+
+                    📂 Categories
+
+                </a>
+
+                <a href="orders.html">
+
+                    🛒 Orders
+
+                </a>
+
+                <a href="customers.html">
+
+                    👥 Customers
+
+                </a>
+
+                <a href="analytics.html">
+
+                    📈 Analytics
+
+                </a>
+
+                <a href="settings.html">
+
+                    ⚙ Settings
+
+                </a>
+
+            </nav>
+
+            <button id="logout-btn">
+
+                🚪 Logout
+
+            </button>
+
+        </aside>
+
+        <!-- Main -->
+
+        <main class="dashboard-content">
+
+            <header class="dashboard-header">
+
+                <h1>
+
+                    📂 Category Management
+
+                </h1>
+
+                <p>
+
+                    Manage all product categories.
+
+                </p>
+
+            </header>
+
+            <div class="categories-toolbar">
+
+                <input type="text" id="category-search" placeholder="🔍 Search Category...">
+
+                <button id="add-category-btn">
+
+                    ➕ Add Category
+
+                </button>
+
+            </div>
+
+            <!-- ===============================
+     CATEGORY STATISTICS
+================================ -->
+
+            <section class="category-stats">
+
+                <div class="stat-card">
+
+                    <h3>
+
+                        📂 Total Categories
+
+                    </h3>
+
+                    <h2 id="total-categories">
+
+                        0
+
+                    </h2>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <h3>
+
+                        👕 Total Products
+
+                    </h3>
+
+                    <h2 id="category-products">
+
+                        0
+
+                    </h2>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <h3>
+
+                        👁 Active Categories
+
+                    </h3>
+
+                    <h2 id="active-categories">
+
+                        0
+
+                    </h2>
+
+                </div>
+
+                <div class="stat-card">
+
+                    <h3>
+
+                        📦 Largest Category
+
+                    </h3>
+
+                    <h2 id="largest-category">
+
+                        --
+
+                    </h2>
+
+                </div>
+
+            </section>
+
+            <section class="category-table">
+
+                <table>
+
+                    <thead>
+
+                        <tr>
+
+                            <th>Image</th>
+
+                            <th>Name</th>
+
+                            <th>Products</th>
+
+                            <th>Status</th>
+
+                            <th>Action</th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody id="categories-body">
+
+                    </tbody>
+
+                </table>
+
+            </section>
+
+        </main>
+
+    </div>
+
+    <!-- ===============================
+     ADD CATEGORY MODAL
+================================ -->
+
+    <div id="category-modal" class="modal">
+
+        <div class="modal-content">
+
+            <span id="close-category-modal" class="close-modal">
+
+                &times;
+
+            </span>
+
+            <h2>
+
+                ➕ Add New Category
+
+            </h2>
+
+            <form id="category-form">
+
+                <input type="text" id="category-name" placeholder="Category Name" required>
+
+                <input type="number" id="category-products-input" placeholder="Initial Product Count" value="0" min="0"
+                    required>
+
+                <select id="category-icon" required>
+
+                    <option value="">
+
+                        Select Icon
+
+                    </option>
+
+                    <option value="👕">
+
+                        👕 Round Neck
+
+                    </option>
+
+                    <option value="👔">
+
+                        👔 Collar
+
+                    </option>
+
+                    <option value="🧥">
+
+                        🧥 Hoodie
+
+                    </option>
+
+                    <option value="🧢">
+
+                        🧢 Cap
+
+                    </option>
+
+                    <option value="🎽">
+
+                        🎽 Tank
+
+                    </option>
+
+                </select>
+
+                <button type="submit" class="submit-btn">
+
+                    Save Category
+
+                </button>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <script src="js/api.js"></script>
+  <script src="js/admin-auth.js"></script>
+
+    <script src="js/categories.js"></script>
+
+</body>
+
+</html>

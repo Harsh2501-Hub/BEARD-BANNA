@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In | BEARD BANNA — Royal Heritage</title>
+    <meta name="description" content="Sign in to your BEARD BANNA account. Access your orders, wishlist and royal heritage apparel.">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+
+    <style>
+        /* ── Login page specific enhancements ── */
+        .auth-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 24px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(212,175,55,0.25);
+        }
+        .auth-tab {
+            flex: 1;
+            padding: 10px;
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            letter-spacing: 0.3px;
+        }
+        .auth-tab.active {
+            background: rgba(251,191,36,0.15);
+            color: #fbbf24;
+            border-bottom: 2px solid #fbbf24;
+        }
+        .auth-tab:hover:not(.active) {
+            background: rgba(255,255,255,0.04);
+            color: #e2d7c5;
+        }
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        /* OAuth buttons grid */
+        .oauth-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 8px;
+        }
+        .oauth-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            padding: 13px 20px;
+            border-radius: 12px;
+            border: 1.5px solid rgba(212,175,55,0.25);
+            background: rgba(255,255,255,0.04);
+            color: #e2d7c5;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.22s ease;
+            text-decoration: none;
+            width: 100%;
+        }
+        .oauth-btn:hover {
+            background: rgba(255,255,255,0.09);
+            border-color: rgba(212,175,55,0.5);
+            color: #fff;
+            transform: translateY(-1px);
+        }
+        .oauth-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .oauth-btn .btn-icon {
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            flex-shrink: 0;
+        }
+        .oauth-btn.google-btn { border-color: rgba(66,133,244,0.4); }
+        .oauth-btn.google-btn:hover { border-color: #4285f4; background: rgba(66,133,244,0.1); }
+        .oauth-btn.github-btn { border-color: rgba(255,255,255,0.2); }
+        .oauth-btn.github-btn:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.08); }
+        .oauth-btn.magic-btn { border-color: rgba(168,85,247,0.35); }
+        .oauth-btn.magic-btn:hover { border-color: #a855f7; background: rgba(168,85,247,0.1); }
+
+        /* Google icon */
+        .google-logo {
+            width: 20px;
+            height: 20px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            font-size: 0.75rem;
+            color: #4285f4;
+            font-family: Arial, sans-serif;
+        }
+
+        /* Magic link success panel */
+        .magic-sent-panel {
+            text-align: center;
+            padding: 20px 10px;
+            display: none;
+        }
+        .magic-sent-panel .magic-icon {
+            font-size: 3rem;
+            margin-bottom: 12px;
+        }
+        .magic-sent-panel h3 {
+            color: #fbbf24;
+            font-family: 'Cinzel', serif;
+            margin-bottom: 10px;
+            font-size: 1.1rem;
+        }
+        .magic-sent-panel p {
+            color: #94a3b8;
+            font-size: 0.88rem;
+            line-height: 1.6;
+        }
+        .magic-sent-panel .email-highlight {
+            color: #fbbf24;
+            font-weight: 700;
+        }
+        .resend-link {
+            background: none;
+            border: none;
+            color: #fbbf24;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
+            margin-top: 12px;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+        }
+        .resend-link:hover { color: #ffd700; }
+
+        /* Auth alert boxes */
+        .auth-info {
+            background: rgba(168,85,247,0.12);
+            border: 1px solid rgba(168,85,247,0.3);
+            border-radius: 10px;
+            padding: 12px 16px;
+            color: #c4b5fd;
+            font-size: 0.85rem;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+        .auth-info .info-action {
+            display: inline-block;
+            margin-top: 8px;
+            color: #a855f7;
+            font-weight: 700;
+            cursor: pointer;
+            text-decoration: underline;
+            background: none;
+            border: none;
+            font-size: 0.85rem;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            padding: 0;
+        }
+        .auth-info .info-action:hover { color: #c084fc; }
+
+        .or-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 20px 0;
+            color: #4a5568;
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+        .or-divider::before,
+        .or-divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(212,175,55,0.15);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <p>HONOR • HISTORY • HERITAGE</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collection</a>
+        <a href="cart.html" id="cart-link">🛒 Cart <span id="cart-count">0</span></a>
+        <span id="user-area"></span>
+    </nav>
+
+    <section class="section">
+        <div class="login-card" style="margin: 30px auto; max-width: 460px;">
+
+            <h1 style="text-align:center; margin-bottom: 6px;">Welcome Back 👑</h1>
+            <p style="color:#94a3b8; text-align:center; margin-bottom:24px; font-size:0.9rem;">
+                Sign in to your <strong style="color:#fbbf24;">BEARD BANNA</strong> account
+            </p>
+
+            <!-- Error / Info Message -->
+            <div id="login-error" class="auth-error" style="display:none;"></div>
+            <div id="login-info" class="auth-info" style="display:none;"></div>
+
+            <!-- ── TABS ── -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="tab-password" onclick="switchTab('password')">🔑 Password</button>
+                <button class="auth-tab" id="tab-magic" onclick="switchTab('magic')">✨ Magic Link</button>
+                <button class="auth-tab" id="tab-social" onclick="switchTab('social')">🌐 Social</button>
+            </div>
+
+            <!-- ── TAB 1: Password Login ── -->
+            <div class="tab-panel active" id="panel-password">
+                <form id="login-form">
+                    <div class="input-wrapper" style="margin-bottom:16px;">
+                        <input type="email" id="login-email" placeholder="Email Address" required
+                            style="width:100%;" autocomplete="email">
+                    </div>
+
+                    <div class="input-wrapper password-wrapper" style="position:relative; margin-bottom:10px;">
+                        <input type="password" id="login-password" placeholder="Password" required
+                            style="width:100%;" autocomplete="current-password">
+                        <button type="button" onclick="togglePasswordVisibility('login-password', this)"
+                            style="position:absolute; right:12px; top:50%; transform:translateY(-50%); background:none; border:none; font-size:1.2rem; cursor:pointer; color:#fbbf24;">
+                            👁️
+                        </button>
+                    </div>
+
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px; flex-wrap:wrap; gap:8px;">
+                        <label style="color:#cbd5e1; display:flex; align-items:center; gap:8px; cursor:pointer; font-size:0.88rem;">
+                            <input type="checkbox" id="remember-me" checked style="accent-color:#fbbf24;">
+                            <span>Remember Me</span>
+                        </label>
+                        <a href="forgot-password.html" style="color:#fbbf24; font-size:0.88rem; text-decoration:none; font-weight:600;">
+                            Forgot Password?
+                        </a>
+                    </div>
+
+                    <button type="submit" class="checkout-btn" id="login-submit-btn" style="width:100%;">
+                        Sign In
+                    </button>
+                </form>
+
+                <div class="or-divider">OR CONTINUE WITH</div>
+
+                <div class="oauth-grid">
+                    <button class="oauth-btn google-btn" id="google-signin-btn" type="button">
+                        <span class="btn-icon">
+                            <span class="google-logo">G</span>
+                        </span>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn github-btn" id="github-signin-btn" type="button">
+                        <span class="btn-icon">🐱</span>
+                        Continue with GitHub
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── TAB 2: Magic Link ── -->
+            <div class="tab-panel" id="panel-magic">
+                <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:18px; line-height:1.6;">
+                    ✨ Enter your email and we'll send you a <strong style="color:#a855f7;">one-click sign in link</strong> — no password needed!
+                </p>
+
+                <!-- Magic link form -->
+                <div id="magic-form-area">
+                    <div class="input-wrapper" style="margin-bottom:16px;">
+                        <input type="email" id="magic-email" placeholder="Your Email Address"
+                            style="width:100%;" autocomplete="email">
+                    </div>
+                    <button class="oauth-btn magic-btn" id="magic-link-btn" type="button" style="margin-top:4px;">
+                        <span class="btn-icon">✉️</span>
+                        Send Magic Link
+                    </button>
+                </div>
+
+                <!-- Sent confirmation -->
+                <div class="magic-sent-panel" id="magic-sent-panel">
+                    <div class="magic-icon">📬</div>
+                    <h3>Check Your Inbox!</h3>
+                    <p>
+                        We sent a magic sign-in link to<br>
+                        <span class="email-highlight" id="magic-sent-email"></span>
+                    </p>
+                    <p style="margin-top:10px;">Click the link in the email to sign in instantly. Check your spam folder if you don't see it.</p>
+                    <button class="resend-link" id="magic-resend-btn">Didn't receive it? Resend</button>
+                </div>
+            </div>
+
+            <!-- ── TAB 3: Social Login ── -->
+            <div class="tab-panel" id="panel-social">
+                <p style="color:#94a3b8; font-size:0.88rem; margin-bottom:18px; line-height:1.6;">
+                    Sign in instantly with your existing social accounts — no password to remember!
+                </p>
+                <div class="oauth-grid">
+                    <button class="oauth-btn google-btn" id="google-social-btn" type="button">
+                        <span class="btn-icon">
+                            <span class="google-logo">G</span>
+                        </span>
+                        Continue with Google
+                    </button>
+                    <button class="oauth-btn github-btn" id="github-social-btn" type="button">
+                        <span class="btn-icon">🐱</span>
+                        Continue with GitHub
+                    </button>
+                </div>
+            </div>
+
+            <!-- ── Bottom link ── -->
+            <p style="margin-top:24px; text-align:center; color:#94a3b8; font-size:0.88rem;">
+                New to BEARD BANNA?
+                <a href="register.html" style="color:#fbbf24; font-weight:700; text-decoration:none; margin-left:4px;">
+                    Create Account →
+                </a>
+            </p>
+        </div>
+    </section>
+
+    <footer>
+        <p style="margin:0; padding:10px 0;">
+            <a href="creator.html" style="color:#ffd700; text-decoration:none; font-weight:800; font-size:1.2rem; letter-spacing:1px; text-shadow:0 0 12px rgba(255,215,0,0.4); transition:all 0.3s ease;">
+                Developed &amp; Maintained by Himanshu ↗
+            </a>
+        </p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/cart.js"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/auth.js"></script>
+    <script src="js/login.js"></script>
+
+</body>
+
+</html>

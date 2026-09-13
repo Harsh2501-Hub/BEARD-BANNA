@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Checkout | BEARD BANNA</title>
+
+    <!-- Google Fonts for Classic & Royal Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+</head>
+
+<body>
+
+    <header>
+        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <p>HONOR • HISTORY • HERITAGE</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collection</a>
+        <a href="cart.html">🛒 Cart</a>
+        <a href="checkout.html" class="active">Checkout</a>
+    </nav>
+
+    <section class="section">
+        <div class="checkout-container">
+            <!-- Delivery Details -->
+            <div class="checkout-form">
+                <h2>Delivery & Tax Details</h2>
+                <form id="checkout-form">
+                    <label>Full Name <span class="required">*</span></label>
+                    <input type="text" id="name" placeholder="Full Name" required>
+
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" placeholder="Email Address" required>
+
+                    <label>Phone Number <span class="required">*</span></label>
+                    <input type="tel" id="phone" placeholder="Phone Number" required>
+
+                    <label>Full Address <span class="required">*</span></label>
+                    <textarea id="address" placeholder="Full Address" required></textarea>
+
+                    <label>City <span class="required">*</span></label>
+                    <input type="text" id="city" placeholder="City" required>
+
+                    <label>State <span class="required">*</span></label>
+                    <select id="state" required onchange="calculateOrderGST()">
+                        <option value="">Select State</option>
+                        <option value="Rajasthan">Rajasthan (State 08 - Intra-State CGST+SGST)</option>
+                        <option value="Delhi">Delhi (Inter-State IGST)</option>
+                        <option value="Maharashtra">Maharashtra (Inter-State IGST)</option>
+                        <option value="Gujarat">Gujarat (Inter-State IGST)</option>
+                        <option value="Punjab">Punjab (Inter-State IGST)</option>
+                        <option value="Haryana">Haryana (Inter-State IGST)</option>
+                        <option value="Uttar Pradesh">Uttar Pradesh (Inter-State IGST)</option>
+                        <option value="Madhya Pradesh">Madhya Pradesh (Inter-State IGST)</option>
+                        <option value="Karnataka">Karnataka (Inter-State IGST)</option>
+                        <option value="Tamil Nadu">Tamil Nadu (Inter-State IGST)</option>
+                        <option value="Telangana">Telangana (Inter-State IGST)</option>
+                        <option value="West Bengal">West Bengal (Inter-State IGST)</option>
+                        <option value="Bihar">Bihar (Inter-State IGST)</option>
+                        <option value="Assam">Assam (Inter-State IGST)</option>
+                        <option value="Odisha">Odisha (Inter-State IGST)</option>
+                        <option value="Kerala">Kerala (Inter-State IGST)</option>
+                        <option value="Andhra Pradesh">Andhra Pradesh (Inter-State IGST)</option>
+                        <option value="Other State">Other State / Union Territory</option>
+                    </select>
+
+                    <label>Pincode <span class="required">*</span></label>
+                    <input type="text" id="pincode" placeholder="Pincode" required>
+
+                    <h2>Select Payment Method</h2>
+                    <div class="payment-options">
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="COD" checked>
+                            <div class="payment-content">
+                                <div class="payment-icon">💵</div>
+                                <div>
+                                    <h3>Cash On Delivery (COD)</h3>
+                                    <p>Pay with cash upon delivery</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="UPI">
+                            <div class="payment-content">
+                                <div class="payment-icon">📲</div>
+                                <div>
+                                    <h3>UPI Payment (GPay / PhonePe / Paytm)</h3>
+                                    <p>Scan & Pay instantly via UPI</p>
+                                </div>
+                            </div>
+                        </label>
+
+                        <label class="payment-card">
+                            <input type="radio" name="payment" value="Card">
+                            <div class="payment-content">
+                                <div class="payment-icon">💳</div>
+                                <div>
+                                    <h3>Credit / Debit Card</h3>
+                                    <p>Safe & Encrypted Card Checkout</p>
+                                </div>
+                            </div>
+                        </label>
+                    </div>
+
+                    <!-- ORDER SUMMARY INSIDE CHECKOUT FORM -->
+                    <div class="order-summary" style="margin-top: 30px;">
+                        <h2>Order Summary</h2>
+                        <div id="checkout-items"></div>
+
+                        <hr style="border: 0; border-top: 1px solid rgba(251,191,36,0.3); margin: 20px 0;">
+
+                        <p>Subtotal (Total Price) : <span id="subtotal"></span></p>
+                        <div id="gst-breakdown-container"></div>
+                        <p>Shipping : <span id="shipping"></span></p>
+                        <h3>Grand Total : <span id="grandTotal"></span></h3>
+                    </div>
+
+                    <button class="checkout-btn" style="margin-top: 20px;">Place Order</button>
+                </form>
+            </div>
+        </div>
+    </section>
+
+    <footer>
+        <p style="margin: 0; padding: 10px 0;"><a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed & Maintained by Himanshu ↗</a></p>
+    </footer>
+
+    <script src="js/api.js"></script>
+    <script src="js/gst.js"></script>
+    <!-- Supabase Auth — must load before checkout.js for auth guard -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="js/supabase-config.js"></script>
+    <script src="js/supabase-client.js"></script>
+    <script src="js/supabase-auth.js"></script>
+    <script src="js/auth.js"></script>
+    <!-- Razorpay Standard Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script src="js/checkout.js"></script>
+    <script src="js/payment.js"></script>
+
+    <!-- ORDER CONFIRMATION MODAL -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h2>Confirm Your Order</h2>
+            <div id="confirm-products"></div>
+            <hr>
+            <div id="confirm-details"></div>
+            <div class="modal-buttons">
+                <button class="cancel-btn" onclick="closeModal()">Cancel</button>
+                <button class="confirm-btn" onclick="confirmOrder()">Confirm Order</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

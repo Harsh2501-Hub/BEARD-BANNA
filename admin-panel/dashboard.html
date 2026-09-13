@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard | BEARD BANNA</title>
+    <link rel="stylesheet" href="css/admin.css">
+    <style>
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 52px;
+        height: 28px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider-round {
+        position: absolute;
+        cursor: pointer;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background-color: #475569;
+        transition: .4s;
+        border-radius: 34px;
+      }
+      .slider-round:before {
+        position: absolute;
+        content: "";
+        height: 20px;
+        width: 20px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: .4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider-round {
+        background-color: #22c55e;
+      }
+      input:checked + .slider-round:before {
+        transform: translateX(24px);
+      }
+    </style>
+</head>
+
+<body class="admin-dashboard">
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <h2>👑 BEARD BANNA</h2>
+                <span>Admin Panel</span>
+            </div>
+            <nav>
+                <a href="dashboard.html" class="active">📊 Dashboard</a>
+                <a href="products.html">📦 Products</a>
+                <a href="categories.html">📂 Categories</a>
+                <a href="orders.html">🛒 Orders</a>
+                <a href="customers.html">👥 Customers</a>
+                <a href="inquiries.html">📩 Inquiries</a>
+                <a href="reviews.html">💬 Reviews</a>
+                <a href="analytics.html">📈 Analytics</a>
+                <a href="settings.html">⚙ Settings</a>
+            </nav>
+            <button id="logout-btn">🚪 Logout</button>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="dashboard-content">
+            <header class="dashboard-header">
+                <h1>Dashboard</h1>
+                <p>Welcome back, Admin 👋</p>
+            </header>
+
+            <!-- GST Automation Control Banner -->
+            <section style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%); padding: 18px 24px; border-radius: 12px; margin-bottom: 25px; display:flex; justify-content:space-between; align-items:center; border: 1px solid #4338ca; box-shadow: 0 8px 20px rgba(0,0,0,0.25);">
+                <div>
+                    <h3 style="color:#fbbf24; font-size:1.15rem; margin:0 0 4px 0; display:flex; align-items:center; gap:8px;">
+                        🏛️ GST Automation & B2B Tax Invoicing
+                    </h3>
+                    <p style="color:#cbd5e1; font-size:0.88rem; margin:0;">
+                        Auto-calculates CGST (2.5%) / SGST (2.5%), tags HSN 6109, and generates PDF Tax Invoices.
+                    </p>
+                </div>
+                <div style="display:flex; align-items:center; gap:12px;">
+                    <span id="gst-status-badge" style="font-weight:700; font-size:0.85rem; padding:4px 10px; border-radius:6px; background:#22c55e; color:white;">ENABLED</span>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="gst-toggle-checkbox" onchange="toggleGSTAutomation(this.checked)">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+            </section>
+
+            <!-- Dashboard Cards -->
+            <section class="dashboard-cards">
+                <div class="card">
+                    <h3>📦 Products</h3>
+                    <h2 id="total-products">0</h2>
+                </div>
+                <div class="card">
+                    <h3>👥 Customers</h3>
+                    <h2 id="total-customers">0</h2>
+                </div>
+                <div class="card">
+                    <h3>🛒 Orders</h3>
+                    <h2 id="total-orders">0</h2>
+                </div>
+                <div class="card">
+                    <h3>💰 Revenue</h3>
+                    <h2 id="total-revenue">₹0</h2>
+                </div>
+                <div class="card">
+                    <h3>📩 Inquiries</h3>
+                    <h2 id="total-inquiries">0</h2>
+                </div>
+                <div class="card" onclick="window.location.href='reviews.html'" style="cursor:pointer;">
+                    <h3>💬 Reviews</h3>
+                    <h2 id="total-reviews">0</h2>
+                </div>
+            </section>
+
+            <!-- Orders + Quick Actions -->
+            <div class="dashboard-row">
+                <section class="recent-orders">
+                    <div class="section-title">
+                        <h2>🛒 Recent Orders</h2>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Order ID</th>
+                                <th>Customer</th>
+                                <th>Amount</th>
+                                <th>Status</th>
+                                <th>Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-orders-body">
+                        </tbody>
+                    </table>
+                </section>
+
+                <aside class="quick-actions">
+                    <h2>⚡ Quick Actions</h2>
+                    <button id="add-product-btn">➕ Add Product</button>
+                    <button id="view-orders-btn">🛒 View Orders</button>
+                    <button id="customers-btn">👥 Customers</button>
+                    <button id="reviews-btn" onclick="window.location.href='reviews.html'">💬 Product Reviews</button>
+                    <button id="inquiries-btn" onclick="window.location.href='inquiries.html'">📩 Inquiries</button>
+                    <button id="settings-btn">⚙ Settings</button>
+                </aside>
+            </div>
+
+            <!-- Recent Customers -->
+            <section class="recent-customers">
+                <div class="section-title">
+                    <h2>👥 Recent Customers</h2>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Email</th>
+                            <th>Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-customers-body">
+                    </tbody>
+                </table>
+            </section>
+
+            <!-- Customer Inquiries & Support Requests -->
+            <section class="recent-customers" style="margin-top:25px;">
+                <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
+                    <h2>📩 Customer Inquiries & Support Requests</h2>
+                    <a href="inquiries.html" style="color:#D4AF37; font-weight:600; text-decoration:none;">View All Inquiries →</a>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Inquiry ID</th>
+                            <th>Name</th>
+                            <th>Contact Info</th>
+                            <th>Order No.</th>
+                            <th>Subject & Message</th>
+                            <th>Date</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="recent-inquiries-body">
+                    </tbody>
+                </table>
+            </section>
+        </main>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/gst.js"></script>
+    <script src="js/products.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/admin-auth.js"></script>
+    <script src="js/dashboard.js"></script>
+</body>
+
+</html>
