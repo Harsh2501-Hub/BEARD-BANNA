@@ -1,36 +1,36 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Customer Inquiries | BEARD BANNA Admin</title>
-  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="/admin-panel/css/admin.css">
 </head>
 <body class="admin-dashboard">
   <div class="admin-container">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="logo">
-        <h2>👑 BEARD BANNA</h2>
+        <h2>?? BEARD BANNA</h2>
         <span>Admin Panel</span>
       </div>
       <nav>
-        <a href="dashboard.html">📊 Dashboard</a>
-        <a href="products.html">📦 Products</a>
-        <a href="categories.html">📂 Categories</a>
-        <a href="orders.html">🛒 Orders</a>
-        <a href="customers.html">👥 Customers</a>
-        <a href="inquiries.html" class="active">📩 Inquiries</a>
-        <a href="analytics.html">📈 Analytics</a>
-        <a href="settings.html">⚙ Settings</a>
+        <a href="dashboard.html">?? Dashboard</a>
+        <a href="products.html">?? Products</a>
+        <a href="categories.html">?? Categories</a>
+        <a href="orders.html">?? Orders</a>
+        <a href="customers.html">?? Customers</a>
+        <a href="inquiries.html" class="active">?? Inquiries</a>
+        <a href="analytics.html">?? Analytics</a>
+        <a href="settings.html">? Settings</a>
       </nav>
-      <button id="logout-btn">🚪 Logout</button>
+      <button id="logout-btn">?? Logout</button>
     </aside>
 
     <!-- Main Content -->
     <main class="dashboard-content">
       <header class="dashboard-header">
-        <h1>📩 Customer Inquiries & Messages</h1>
+        <h1>?? Customer Inquiries & Messages</h1>
         <p>Review customer queries, mandatory phone numbers, and optional order references.</p>
       </header>
 
@@ -53,7 +53,7 @@
       <!-- Inquiries Table -->
       <section class="recent-customers" style="margin-top:25px;">
         <div class="section-title" style="display:flex; justify-content:space-between; align-items:center;">
-          <h2>📜 Message Log</h2>
+          <h2>?? Message Log</h2>
           <input type="text" id="inquiry-search" placeholder="Search by Name, Email, Phone or Order No..." style="padding:8px 14px; border:1px solid #334155; border-radius:6px; background:#0f172a; color:white; width:320px;">
         </div>
 
@@ -77,12 +77,12 @@
     </main>
   </div>
 
-  <script src="js/api.js"></script>
+  <script src="/admin-panel/js/api.js"></script>
   <!-- Supabase: required for admin session (RLS is_admin() check) -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="js/supabase-config.js"></script>
-  <script src="js/supabase-client.js"></script>
-  <script src="js/admin-auth.js"></script>
-  <script src="js/inquiries.js"></script>
+  <script src="/admin-panel/js/supabase-config.js"></script>
+  <script src="/admin-panel/js/supabase-client.js"></script>
+  <script src="/admin-panel/js/admin-auth.js"></script>
+  <script src="/admin-panel/js/inquiries.js"></script>
 </body>
 </html>
