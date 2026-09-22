@@ -1532,65 +1532,65 @@ body {
 =============================== */
 
 .status-select {
-
     width: 145px;
-
-    padding: 9px;
-
-    border: none;
-
-    border-radius: 10px;
-
-    color: white;
-
-    font-weight: bold;
-
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 8px;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.85rem;
     cursor: pointer;
+    transition: all 0.2s ease;
+    background-color: #d97706;
+    outline: none;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
 
-    transition: .3s;
-
+.status-select option {
+    background-color: #1e293b;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 8px;
 }
 
 .status-select:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
 
-    transform: scale(1.03);
-
+.status-select.processing {
+    background: #d97706;
+    color: #ffffff;
 }
 
 .status-select.pending {
-
-    background: #ff9800;
-
+    background: #f59e0b;
+    color: #ffffff;
 }
 
 .status-select.confirmed {
-
-    background: #2196f3;
-
+    background: #2563eb;
+    color: #ffffff;
 }
 
 .status-select.packed {
-
-    background: #9c27b0;
-
+    background: #7c3aed;
+    color: #ffffff;
 }
 
 .status-select.shipped {
-
-    background: #4caf50;
-
+    background: #0284c7;
+    color: #ffffff;
 }
 
 .status-select.delivered {
-
-    background: #009688;
-
+    background: #16a34a;
+    color: #ffffff;
 }
 
 .status-select.cancelled {
-
-    background: #e53935;
-
+    background: #dc2626;
+    color: #ffffff;
 }
 
 /* ===============================

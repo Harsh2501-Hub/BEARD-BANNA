@@ -247,7 +247,7 @@ function renderOrders(filteredOrders = orders) {
         </td>
         <td>₹${order.total || order.grandTotal || 0}</td>
         <td>
-          <select class="status-select ${formattedStatus.toLowerCase()}" onchange="updateOrderStatus('${orderIdentifier}', this.value)">
+          <select class="status-select ${formattedStatus.toLowerCase()}" onchange="updateOrderStatus('${orderIdentifier}', this.value, this)">
             <option value="Processing" ${formattedStatus === "Processing" ? "selected" : ""}>Processing</option>
             <option value="Pending" ${formattedStatus === "Pending" ? "selected" : ""}>Pending</option>
             <option value="Confirmed" ${formattedStatus === "Confirmed" ? "selected" : ""}>Confirmed</option>
@@ -277,8 +277,11 @@ function renderOrders(filteredOrders = orders) {
   updateOrderStatistics();
 }
 
-async function updateOrderStatus(id, status) {
+async function updateOrderStatus(id, status, selectEl = null) {
   const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  if (selectEl) {
+    selectEl.className = `status-select ${normalizedStatus.toLowerCase()}`;
+  }
 
   // ── Update in-memory list ──
   const order = orders.find(o => String(o.id) === String(id) || String(o._id) === String(id) || String(o.orderId) === String(id));
