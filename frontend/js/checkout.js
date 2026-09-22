@@ -574,10 +574,14 @@ async function finalizeOrder(paymentMeta = {}) {
       return; // STOP
     }
   } else {
-    console.warn('[Checkout] ⚠️ Supabase client not available. Order saved locally only.');
+    console.error('[Checkout] ❌ Supabase client is not available.');
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+    _orderInProgress = false;
+    alert('❌ Database connection unavailable. Please refresh and try again.');
+    return;
   }
 
-  // ── STEP 4: Clear cart (only after confirmed save) ──────────────────
+  // ── STEP 4: Clear cart (only after confirmed DB save) ──────────────────
   localStorage.removeItem("cart");
 
   // ── STEP 5: Background REST API sync (MongoDB) — non-blocking ──────

@@ -65,8 +65,37 @@ async function loadDashboardMetrics() {
     console.warn('[Dashboard] Supabase metrics notice:', sbErr.message);
   }
 
-  // 2. Load Inquiries from localStorage
-  const inquiries = JSON.parse(localStorage.getItem("inquiries")) || [];
+  // 2. Load Inquiries from Supabase (PRIMARY)
+  let inquiries = [];
+  try {
+    if (window.supabaseClient) {
+      const { data: sbInqs, error: inqErr } = await window.supabaseClient
+        .from('inquiries')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(20);
+      if (Array.isArray(sbInqs)) {
+        inquiries = sbInqs.map(i => ({
+          id: i.inquiry_number || i.id,
+          name: i.name || "Customer",
+          email: i.email || "",
+          phone: i.phone || "",
+          orderNumber: i.order_number || "N/A",
+          subject: i.subject || "Inquiry",
+          message: i.message || "",
+          status: i.status || "New",
+          date: i.created_at ? new Date(i.created_at).toLocaleDateString("en-IN") : "Today"
+        }));
+      }
+    }
+  } catch (e) {
+    console.warn("[Dashboard] Supabase inquiries fetch error:", e);
+  }
+
+  if (inquiries.length === 0) {
+    const localInqs = JSON.parse(localStorage.getItem("inquiries") || "[]");
+    inquiries = localInqs.filter(i => !i.id?.startsWith("INQ-981241"));
+  }
 
   // 3. Try loading backend dashboard stats
   try {

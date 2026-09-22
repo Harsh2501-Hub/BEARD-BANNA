@@ -142,6 +142,90 @@ async function loadAdminOrders() {
 
   orders = combinedOrders;
   renderOrders();
+  setupOrdersRealtime();
+}
+
+let ordersSubscription = null;
+
+function setupOrdersRealtime() {
+  if (ordersSubscription || !window.supabaseClient) return;
+
+  try {
+    ordersSubscription = window.supabaseClient
+      .channel('admin-orders-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'orders' },
+        async (payload) => {
+          console.log('[Admin Orders] ⚡ Realtime order received:', payload.new);
+          if (payload.new) {
+            const o = payload.new;
+            let items = [];
+            try {
+              const { data: itemData } = await window.supabaseClient
+                .from('order_items')
+                .select('*')
+                .eq('order_id', o.id);
+              if (Array.isArray(itemData)) items = itemData;
+            } catch (e) {}
+
+            const newMapped = {
+              id: o.order_number || o.id,
+              _id: o.id,
+              orderId: o.order_number || o.id,
+              customer: o.customer_name || "Customer",
+              email: o.customer_email || "",
+              phone: o.customer_phone || (o.shipping_address && o.shipping_address.phone) || "",
+              total: Number(o.total || 0),
+              grandTotal: Number(o.total || 0),
+              status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Processing"),
+              date: new Date(o.created_at || Date.now()).toLocaleDateString("en-IN"),
+              payment: (o.payment_method || "COD").toUpperCase(),
+              paymentStatus: o.payment_status || "Pending",
+              address: typeof o.shipping_address === 'object' && o.shipping_address
+                ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
+                : (o.shipping_address || 'N/A'),
+              razorpayPaymentId: o.razorpay_payment_id || "",
+              items: items.map(item => ({
+                name: item.name || "Product",
+                size: item.size || "M",
+                quantity: item.quantity || 1,
+                price: item.price || 0
+              }))
+            };
+
+            if (!orders.some(ex => String(ex.id) === String(newMapped.id) || String(ex._id) === String(newMapped._id))) {
+              orders.unshift(newMapped);
+              renderOrders();
+              if (typeof showToast === 'function') {
+                showToast(`🔔 New Order: #${newMapped.id} by ${newMapped.customer}!`);
+              }
+            }
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload) => {
+          if (payload.new) {
+            const o = payload.new;
+            const target = orders.find(ex => String(ex.id) === String(o.order_number) || String(ex._id) === String(o.id));
+            if (target) {
+              const formattedStatus = o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : target.status;
+              target.status = formattedStatus;
+              target.orderStatus = formattedStatus;
+              renderOrders();
+            }
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[Admin Orders] Realtime subscription status:', status);
+      });
+  } catch (e) {
+    console.warn('[Admin Orders] Realtime subscription error:', e);
+  }
 }
 
 function renderOrders(filteredOrders = orders) {
