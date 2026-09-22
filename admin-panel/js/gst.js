@@ -45,7 +45,9 @@ async function syncGSTSettingsFromDB() {
         const rateSetting = settings.find(s => s.key === 'gst_rate');
 
         if (gstSetting) {
-          const isEnabled = gstSetting.value === true || gstSetting.value === 'true';
+          // Handle all JSONB representations correctly
+          const val = gstSetting.value;
+          const isEnabled = val === true || val === 'true' || val === 1;
           window.GST_SETTINGS_OVERRIDE = isEnabled;
           GST_CONFIG.enabled = isEnabled;
           localStorage.setItem("gstAutomationEnabled", isEnabled ? "true" : "false");
@@ -59,8 +61,9 @@ async function syncGSTSettingsFromDB() {
             badge.style.background = isEnabled ? "#22c55e" : "#ef4444";
           }
         }
-        if (rateSetting && typeof rateSetting.value === 'number') {
-          GST_CONFIG.defaultGSTRate = rateSetting.value;
+        if (rateSetting) {
+          const rateVal = typeof rateSetting.value === 'number' ? rateSetting.value : Number(rateSetting.value);
+          if (!isNaN(rateVal) && rateVal > 0) GST_CONFIG.defaultGSTRate = rateVal;
         }
       }
     }
@@ -88,25 +91,37 @@ async function toggleGSTAutomation(isEnabled) {
     badge.style.background = isEnabled ? "#22c55e" : "#ef4444";
   }
 
-  // Persist to Supabase store_settings
+  // Persist to Supabase store_settings using admin session token
   const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
   const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
+
+  // Use admin session token if available (required after RLS tightening)
+  let authToken = anonKey;
+  if (window.supabaseClient) {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (session?.access_token) authToken = session.access_token;
+    } catch (e) {}
+  }
   
   try {
-    await fetch(`${supabaseUrl}/rest/v1/store_settings`, {
+    const res = await fetch(`${supabaseUrl}/rest/v1/store_settings`, {
       method: 'POST',
       headers: {
         'apikey': anonKey,
-        'Authorization': 'Bearer ' + anonKey,
+        'Authorization': 'Bearer ' + authToken,
         'Content-Type': 'application/json',
         'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({
         key: 'gst_enabled',
-        value: isEnabled,
+        value: isEnabled,  // Store as actual boolean
         updated_at: new Date().toISOString()
       })
     });
+    if (!res.ok) {
+      console.warn('[GST Admin] Failed to save to DB:', res.status, await res.text());
+    }
   } catch (err) {
     console.warn('[GST] Failed to update DB:', err);
   }

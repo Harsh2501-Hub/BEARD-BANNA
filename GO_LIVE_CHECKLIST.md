@@ -59,8 +59,8 @@ const API_BASE_URL = window.location.origin.includes('localhost')
 
 ## 🔐 Default Admin Access Credentials
 * **Admin Login URL**: `https://<your-domain>/admin-panel/login.html`
-* **Default Admin Email**: `admin@clothing.com` (or username `admin`)
-* **Default Admin Password**: `AdminPass123!`
+* **Default Admin Email**: `beardbanna07773@gmail.com` or `admin@clothing.com` (or username `beardbanna` / `admin`)
+* **Admin Password**: `Banna@7773` (also accepts legacy `AdminPass123!`)
 
 ---
 

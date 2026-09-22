@@ -1,41 +1,35 @@
 // ===============================
-// BEARD BANNA CHECKOUT SYSTEM - FAULT-TOLERANT INSTANT ORDERING
+// BEARD BANNA CHECKOUT SYSTEM - PRODUCTION-HARDENED v2
 // ===============================
 
-// Auth guard — check Supabase session first, then legacy fallback
+// ── Auth guard — resolve Supabase session first ──────────────────────────────
 (async function checkCheckoutAuth() {
   let isAuthenticated = false;
 
-  // 1. Try Supabase session (preferred)
   if (window.supabaseClient && window.SupabaseAuth) {
     try {
-      const { user } = await SupabaseAuth.getSession();
+      const { user, session } = await SupabaseAuth.getSession();
       if (user) {
         isAuthenticated = true;
-        // Keep legacy API in sync so existing checkout code works
         if (window.API) {
-          const existing = API.getCurrentUser();
-          if (!existing || !existing.id) {
-            API.setCurrentUser({
-              id: user.id,
-              name: user.user_metadata?.full_name || user.email.split('@')[0],
-              email: user.email,
-              phone: user.user_metadata?.phone || '',
-              role: 'customer'
-            });
-          }
+          API.setCurrentUser({
+            id: user.id,
+            name: user.user_metadata?.full_name || user.email.split('@')[0],
+            email: user.email,
+            phone: user.user_metadata?.phone || '',
+            role: 'customer'
+          });
+          if (session?.access_token) API.setToken(session.access_token);
         }
       }
     } catch (e) { /* ignore */ }
   }
 
-  // 2. Fallback: legacy localStorage token
+  // Fallback: legacy localStorage token
   if (!isAuthenticated && window.API) {
     const legacyUser = API.getCurrentUser();
     const legacyToken = API.getToken();
-    if (legacyUser && legacyToken) {
-      isAuthenticated = true;
-    }
+    if (legacyUser && legacyToken) isAuthenticated = true;
   }
 
   if (!isAuthenticated) {
@@ -44,7 +38,7 @@
   }
 })();
 
-
+// ── Cart and DOM references ────────────────────────────────────────────────
 const cart = JSON.parse(localStorage.getItem("cart")) || [];
 const summary = document.getElementById("checkout-items");
 const subtotalElement = document.getElementById("subtotal");
@@ -60,11 +54,22 @@ let appliedCouponCode = "";
 let orderData = {};
 let currentGST = null;
 
+// Prevent double-order submission
+let _orderInProgress = false;
+
 if (cart.length === 0) {
-  if (summary) summary.innerHTML = `<p>Your cart is empty.</p>`;
-} else {
-  displaySummary();
+  if (summary) summary.innerHTML = `<p>Your cart is empty. <a href="collection.html">Browse our collection →</a></p>`;
 }
+
+// ── GST: await DB sync before rendering totals ─────────────────────────────
+// This fixes the race condition where calculateGST() runs before
+// syncGSTSettingsFromDB() resolves, causing stale GST state.
+(async function initGST() {
+  if (typeof syncGSTSettingsFromDB === 'function') {
+    try { await syncGSTSettingsFromDB(); } catch (e) {}
+  }
+  if (cart.length > 0) displaySummary();
+})();
 
 function displaySummary() {
   if (!summary) return;
@@ -104,7 +109,6 @@ function calculateTotals() {
   if (shippingElement) shippingElement.innerHTML = shipping === 0 ? "FREE" : "₹99";
   if (grandTotalElement) grandTotalElement.innerHTML = "₹" + grandTotal;
 
-  // Render 2.5% CGST + 2.5% SGST Breakdown in Checkout Order Summary
   if (gstContainer) {
     if (currentGST && currentGST.enabled) {
       gstContainer.innerHTML = `
@@ -118,11 +122,9 @@ function calculateTotals() {
 }
 
 const stateInputEl = document.getElementById("state");
-if (stateInputEl) {
-  stateInputEl.addEventListener("input", calculateTotals);
-}
+if (stateInputEl) stateInputEl.addEventListener("input", calculateTotals);
 
-// Payment UI display toggle
+// Payment UI
 const paymentRadios = document.querySelectorAll('input[name="payment"]');
 const upiSection = document.getElementById("upi-section");
 const cardSection = document.getElementById("card-section");
@@ -137,14 +139,11 @@ paymentRadios.forEach(radio => {
   });
 });
 
-// Coupon Code Validation
+// Coupon Code
 async function applyCoupon(code) {
   if (!code) return;
   try {
-    const res = await API.post('/coupons/validate', {
-      code,
-      orderAmount: subtotal
-    });
+    const res = await API.post('/coupons/validate', { code, orderAmount: subtotal });
     if (res.success && res.data) {
       appliedDiscount = res.data.discountAmount || 0;
       appliedCouponCode = code.toUpperCase();
@@ -158,7 +157,7 @@ async function applyCoupon(code) {
   }
 }
 
-// Checkout Form Submission
+// ── CHECKOUT FORM ──────────────────────────────────────────────────────────
 const checkoutForm = document.getElementById("checkout-form");
 
 if (checkoutForm) {
@@ -179,39 +178,24 @@ if (checkoutForm) {
       alert("Please fill all required fields.");
       return;
     }
-
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       alert("Enter a valid Email Address.");
       return;
     }
-
     if (!/^[6-9]\d{9}$/.test(phone)) {
       alert("Enter a valid 10-digit Mobile Number.");
       return;
     }
-
     if (!/^\d{6}$/.test(pincode)) {
       alert("Enter a valid 6-digit PIN Code.");
       return;
     }
-
     if (!payment) {
       alert("Please choose a payment method.");
       return;
     }
 
-    orderData = {
-      name,
-      email,
-      phone,
-      address,
-      city,
-      state,
-      pincode,
-      gstin: gstin || "N/A",
-      payment: payment.value
-    };
-
+    orderData = { name, email, phone, address, city, state, pincode, gstin: gstin || "N/A", payment: payment.value };
     showConfirmation();
   });
 }
@@ -241,13 +225,8 @@ function showConfirmation() {
   delivery.setDate(delivery.getDate() + 5);
 
   const paymentNames = {
-    COD: "Cash On Delivery",
-    UPI: "UPI",
-    Card: "Credit / Debit Card",
-    cod: "Cash On Delivery",
-    upi: "UPI",
-    credit: "Credit Card",
-    debit: "Debit Card"
+    COD: "Cash On Delivery", UPI: "UPI", Card: "Credit / Debit Card",
+    cod: "Cash On Delivery", upi: "UPI", credit: "Credit Card", debit: "Debit Card"
   };
 
   calculateTotals();
@@ -300,62 +279,40 @@ function closeModal() {
 }
 
 function confirmOrder() {
-  const btn = document.querySelector(".confirm-btn");
-  if (btn && btn.disabled) return; // Prevent duplicate order on double click
+  if (_orderInProgress) return;
 
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `⏳ Processing Order...`;
-  }
+  const btn = document.querySelector(".confirm-btn");
+  if (btn && btn.disabled) return;
+
+  _orderInProgress = true;
+  if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Processing Order...`; }
 
   const selectedPayment = (orderData.payment || "COD").toUpperCase();
   calculateTotals();
 
-  // If Cash on Delivery, place order directly
   if (selectedPayment === "COD") {
-    if (btn) {
-      btn.innerHTML = `✔ Placed! Redirecting...`;
-    }
-    finalizeOrder({
-      paymentMethod: "COD",
-      paymentStatus: "Pending"
-    });
+    finalizeOrder({ paymentMethod: "COD", paymentStatus: "Pending" });
     return;
   }
 
-  // Online Payment via Razorpay (UPI or Card)
   handleRazorpayPayment(btn, selectedPayment);
 }
 
-/**
- * Initiates Razorpay checkout popup and verifies payment
- */
 async function handleRazorpayPayment(btn, paymentMethod) {
-  if (btn) {
-    btn.disabled = true;
-    btn.innerHTML = `⏳ Opening Razorpay...`;
-  }
+  if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Opening Razorpay...`; }
 
-  // Ensure Razorpay SDK is loaded
   if (typeof Razorpay === "undefined") {
     alert("Razorpay payment SDK is loading. Please check your internet connection and try again.");
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = "Confirm Order";
-    }
+    if (btn) { btn.disabled = false; btn.innerHTML = "Confirm Order"; }
+    _orderInProgress = false;
     return;
   }
 
   try {
-    // 1. Create order on backend
     const createRes = await API.post('/payment/create-order', {
       amount: grandTotal,
       receipt: 'rcpt_' + Date.now().toString().slice(-8),
-      notes: {
-        customerName: orderData.name || '',
-        customerEmail: orderData.email || '',
-        paymentMethod: paymentMethod
-      }
+      notes: { customerName: orderData.name || '', customerEmail: orderData.email || '', paymentMethod }
     });
 
     if (!createRes || !createRes.success || !createRes.order) {
@@ -365,10 +322,8 @@ async function handleRazorpayPayment(btn, paymentMethod) {
     const rzpOrder = createRes.order;
     const keyId = createRes.keyId || 'rzp_test_TZ41JZFiQ58s0Q';
 
-    // Hide confirmation modal while payment popup is active
     closeModal();
 
-    // 2. Configure Razorpay Standard Checkout
     const options = {
       key: keyId,
       amount: rzpOrder.amount,
@@ -376,30 +331,18 @@ async function handleRazorpayPayment(btn, paymentMethod) {
       name: 'BEARD BANNA',
       description: `Payment for Order (${paymentMethod})`,
       order_id: rzpOrder.id,
-      prefill: {
-        name: orderData.name || '',
-        email: orderData.email || '',
-        contact: orderData.phone || ''
-      },
-      theme: {
-        color: '#d4af37' // Signature royal gold theme
-      },
+      prefill: { name: orderData.name || '', email: orderData.email || '', contact: orderData.phone || '' },
+      theme: { color: '#d4af37' },
       modal: {
         ondismiss: function () {
           alert('Payment cancelled. You can complete payment or select Cash on Delivery.');
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = 'Confirm Order';
-          }
+          if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+          _orderInProgress = false;
         }
       },
       handler: async function (response) {
-        // Payment successful on Razorpay side, now verify cryptographic signature
         try {
-          if (btn) {
-            btn.disabled = true;
-            btn.innerHTML = `⏳ Verifying Payment...`;
-          }
+          if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Verifying Payment...`; }
 
           const verifyRes = await API.post('/payment/verify', {
             razorpay_order_id: response.razorpay_order_id,
@@ -408,9 +351,8 @@ async function handleRazorpayPayment(btn, paymentMethod) {
           });
 
           if (verifyRes && verifyRes.success) {
-            // Signature valid! Finalize order as PAID
-            finalizeOrder({
-              paymentMethod: paymentMethod,
+            await finalizeOrder({
+              paymentMethod,
               paymentStatus: 'Paid',
               razorpayOrderId: response.razorpay_order_id,
               razorpayPaymentId: response.razorpay_payment_id,
@@ -418,49 +360,44 @@ async function handleRazorpayPayment(btn, paymentMethod) {
             });
           } else {
             alert('Payment verification failed: ' + (verifyRes?.message || 'Signature mismatch'));
-            if (btn) {
-              btn.disabled = false;
-              btn.innerHTML = 'Confirm Order';
-            }
+            if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+            _orderInProgress = false;
           }
         } catch (vErr) {
-          console.error('Verification error:', vErr);
           alert('Error verifying payment with server. Please contact support if amount was debited: ' + vErr.message);
-          if (btn) {
-            btn.disabled = false;
-            btn.innerHTML = 'Confirm Order';
-          }
+          if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+          _orderInProgress = false;
         }
       }
     };
 
     const rzpInstance = new Razorpay(options);
-
     rzpInstance.on('payment.failed', function (resp) {
-      console.error('Razorpay payment failed:', resp.error);
       alert('Payment failed: ' + (resp.error?.description || 'Transaction declined. Please try another card or UPI.'));
-      if (btn) {
-        btn.disabled = false;
-        btn.innerHTML = 'Confirm Order';
-      }
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+      _orderInProgress = false;
     });
-
     rzpInstance.open();
 
   } catch (err) {
-    console.error('Razorpay initialization error:', err);
     alert('Unable to start online payment: ' + (err.message || 'Please check server connection or choose Cash on Delivery.'));
-    if (btn) {
-      btn.disabled = false;
-      btn.innerHTML = 'Confirm Order';
-    }
+    if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+    _orderInProgress = false;
   }
 }
 
 /**
- * Saves order locally and syncs to MongoDB backend, then redirects to order-success.html
+ * ─────────────────────────────────────────────────────────────────────────────
+ * PRODUCTION-HARDENED finalizeOrder()
+ *
+ * CRITICAL FIX: Uses await on Supabase INSERT — no redirect until DB confirms.
+ * Old code used .finally() which redirected even if INSERT failed silently.
+ * ─────────────────────────────────────────────────────────────────────────────
  */
-function finalizeOrder(paymentMeta = {}) {
+async function finalizeOrder(paymentMeta = {}) {
+  const btn = document.querySelector(".confirm-btn");
+  if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Saving Order...`; }
+
   const orderItems = cart.map(item => ({
     productId: item.id || item._id || "PROD-1001",
     name: item.name || "Product",
@@ -482,15 +419,21 @@ function finalizeOrder(paymentMeta = {}) {
   };
 
   calculateTotals();
+
+  // Snapshot GST at order-placement time
+  const gstSnapshot = currentGST
+    ? { ...currentGST }
+    : { enabled: false, totalGST: 0, cgstAmount: 0, sgstAmount: 0, gstRate: 0 };
+
   const orderId = "BB" + Date.now().toString().slice(-8);
 
   const newOrderObj = {
     id: orderId,
     orderId: orderId,
-    customer: orderData.name || currentUser?.name || "Customer",
-    customerName: orderData.name || currentUser?.name || "Customer",
-    email: (orderData.email || currentUser?.email || "").toLowerCase(),
-    customerEmail: (orderData.email || currentUser?.email || "").toLowerCase(),
+    customer: orderData.name || "Customer",
+    customerName: orderData.name || "Customer",
+    email: (orderData.email || "").toLowerCase(),
+    customerEmail: (orderData.email || "").toLowerCase(),
     phone: orderData.phone || "9876543210",
     customerPhone: orderData.phone || "9876543210",
     gstin: orderData.gstin || "N/A",
@@ -509,8 +452,8 @@ function finalizeOrder(paymentMeta = {}) {
     grandTotal: grandTotal,
     subtotal: subtotal,
     shipping: shipping,
-    tax: (currentGST && currentGST.enabled) ? currentGST.totalGST : 0,
-    gstDetails: currentGST,
+    tax: gstSnapshot.enabled ? gstSnapshot.totalGST : 0,
+    gstDetails: gstSnapshot,
     date: new Date().toLocaleDateString("en-IN"),
     orderDate: new Date().toISOString(),
     items: orderItems.map(i => ({
@@ -524,35 +467,36 @@ function finalizeOrder(paymentMeta = {}) {
     cart: cart
   };
 
-  // 1. Save locally
+  // ── STEP 1: Save locally (provides immediate fallback) ──────────────────
   try {
     localStorage.setItem("lastOrder", JSON.stringify(newOrderObj));
-
     const existingOrders = JSON.parse(localStorage.getItem("orders")) || [];
     existingOrders.unshift(newOrderObj);
     localStorage.setItem("orders", JSON.stringify(existingOrders));
-
-    localStorage.removeItem("cart");
   } catch (err) {
-    console.error("Local storage error:", err);
+    console.warn("[Checkout] Local storage error:", err);
   }
 
-  // 2. Persist order directly into Supabase database
-  async function persistToSupabase() {
-    if (!window.supabaseClient) return;
+  // ── STEP 2: AWAIT Supabase INSERT — BLOCKS REDIRECT ────────────────────
+  // This is the core fix: we wait for DB confirmation before redirecting.
+  // If insert fails, we show an error and DO NOT redirect.
 
+  if (window.supabaseClient) {
     try {
+      // Get authenticated user's UUID for the order link
       let sbUserId = null;
       if (window.SupabaseAuth) {
         try {
-          const sess = await window.SupabaseAuth.getSession();
+          const sess = await SupabaseAuth.getSession();
           if (sess?.user?.id) sbUserId = sess.user.id;
         } catch (e) {}
       }
 
+      if (btn) btn.innerHTML = `⏳ Confirming with database...`;
+
       const orderPayload = {
-        order_number: newOrderObj.id,
-        user_id: sbUserId,
+        order_number: newOrderObj.orderId,
+        user_id: sbUserId,           // auth.uid() — links order to customer's Supabase UUID
         customer_name: newOrderObj.customerName,
         customer_email: newOrderObj.customerEmail,
         customer_phone: newOrderObj.customerPhone,
@@ -580,8 +524,21 @@ function finalizeOrder(paymentMeta = {}) {
         .single();
 
       if (orderErr) {
-        console.warn('[Checkout] Supabase order insert notice:', orderErr.message);
-      } else if (insertedOrder && insertedOrder.id) {
+        // ── INSERT FAILED: Show real error, do NOT redirect ──
+        console.error('[Checkout] ❌ Supabase order insert FAILED:', orderErr.message, orderErr.code);
+        if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+        _orderInProgress = false;
+        alert(
+          '❌ Order could not be saved to database.\n' +
+          'Error: ' + (orderErr.message || 'Unknown error') + '\n\n' +
+          'Please try again. If the problem persists, contact support.\n' +
+          'Your Order ID reference: ' + orderId
+        );
+        return; // STOP — do not redirect
+      }
+
+      if (insertedOrder && insertedOrder.id) {
+        // ── STEP 3: Insert order_items ──
         const itemsPayload = orderItems.map(item => ({
           order_id: insertedOrder.id,
           product_id: String(item.productId),
@@ -591,45 +548,74 @@ function finalizeOrder(paymentMeta = {}) {
           price: Number(item.price || 0),
           hsn: "6109"
         }));
-        await window.supabaseClient.from('order_items').insert(itemsPayload);
-        console.log('[Checkout] ✅ Order persisted to Supabase:', insertedOrder.order_number);
+
+        const { error: itemsErr } = await window.supabaseClient
+          .from('order_items')
+          .insert(itemsPayload);
+
+        if (itemsErr) {
+          // Items failed but order exists — log, don't block user
+          console.warn('[Checkout] ⚠️ order_items insert failed:', itemsErr.message);
+        }
+
+        console.log('[Checkout] ✅ Order confirmed in Supabase:', insertedOrder.order_number);
       }
+
     } catch (err) {
-      console.warn('[Checkout] Supabase sync error:', err.message);
+      console.error('[Checkout] ❌ Supabase exception:', err.message);
+      if (btn) { btn.disabled = false; btn.innerHTML = 'Confirm Order'; }
+      _orderInProgress = false;
+      alert(
+        '❌ Connection error while saving order.\n' +
+        'Error: ' + (err.message || 'Unknown') + '\n\n' +
+        'Please check your internet connection and try again.\n' +
+        'Your Order ID: ' + orderId
+      );
+      return; // STOP
     }
+  } else {
+    console.warn('[Checkout] ⚠️ Supabase client not available. Order saved locally only.');
   }
 
-  // Execute Supabase persistence, then redirect
-  persistToSupabase().finally(() => {
-    // 3. Background REST API call (MongoDB backend fallback)
-    try {
-      if (typeof API !== "undefined" && API.post) {
-        API.post('/orders', {
-          customerName: newOrderObj.customerName,
-          customerEmail: newOrderObj.customerEmail,
-          customerPhone: newOrderObj.customerPhone,
-          shippingAddress: newOrderObj.shippingAddress,
-          items: newOrderObj.items,
-          subtotal: newOrderObj.subtotal,
-          tax: newOrderObj.tax,
-          shipping: newOrderObj.shipping,
-          total: newOrderObj.grandTotal,
-          paymentMethod: newOrderObj.paymentMethod,
-          paymentStatus: newOrderObj.paymentStatus,
-          razorpayOrderId: newOrderObj.razorpayOrderId,
-          razorpayPaymentId: newOrderObj.razorpayPaymentId,
-          razorpaySignature: newOrderObj.razorpaySignature,
-          couponCode: appliedCouponCode || undefined
-        }).catch(e => console.warn('Background order sync notice:', e));
-      }
-    } catch (e) {}
+  // ── STEP 4: Clear cart (only after confirmed save) ──────────────────
+  localStorage.removeItem("cart");
 
-    // 4. Redirect to order-success page
-    window.location.href = "order-success.html";
-  });
+  // ── STEP 5: Background REST API sync (MongoDB) — non-blocking ──────
+  try {
+    if (typeof API !== "undefined" && API.post) {
+      API.post('/orders', {
+        customerName: newOrderObj.customerName,
+        customerEmail: newOrderObj.customerEmail,
+        customerPhone: newOrderObj.customerPhone,
+        shippingAddress: newOrderObj.shippingAddress,
+        items: newOrderObj.items,
+        subtotal: newOrderObj.subtotal,
+        tax: newOrderObj.tax,
+        shipping: newOrderObj.shipping,
+        total: newOrderObj.grandTotal,
+        paymentMethod: newOrderObj.paymentMethod,
+        paymentStatus: newOrderObj.paymentStatus,
+        razorpayOrderId: newOrderObj.razorpayOrderId,
+        razorpayPaymentId: newOrderObj.razorpayPaymentId,
+        razorpaySignature: newOrderObj.razorpaySignature,
+        couponCode: appliedCouponCode || undefined
+      }).catch(e => console.warn('[Checkout] Background REST API sync notice:', e.message));
+    }
+  } catch (e) {}
+
+  // ── STEP 6: Redirect — only reached if Supabase save succeeded ─────
+  if (btn) btn.innerHTML = `✅ Order Confirmed! Redirecting...`;
+  window.location.href = "order-success.html";
 }
 
 window.addEventListener("click", function (e) {
   const modal = document.getElementById("confirm-modal");
   if (e.target === modal) closeModal();
 });
+
+// Expose functions for HTML onclick attributes
+window.confirmOrder = confirmOrder;
+window.closeModal = closeModal;
+window.showConfirmation = showConfirmation;
+window.applyCoupon = applyCoupon;
+window.calculateOrderGST = calculateTotals;

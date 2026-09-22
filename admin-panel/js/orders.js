@@ -1,80 +1,111 @@
 // ===============================
-// ADMIN ORDERS - CANCEL ANY ORDER & CLEAR TEST DATA
+// ADMIN ORDERS - SUPABASE-POWERED (RLS-AUTHENTICATED)
 // ===============================
+//
+// DATA SOURCE PRIORITY:
+//   1. Supabase (PRIMARY) — uses authenticated admin session so is_admin() = true in RLS
+//   2. REST API backend (MongoDB) — fallback
+//   3. localStorage — local device cache only
+//
+// The admin MUST be signed into Supabase (done via admin-auth.js) for
+// Supabase queries to pass the is_admin() RLS check and return all orders.
+//
 
-let orders = JSON.parse(localStorage.getItem("orders")) || [];
+let orders = [];
 
 async function loadAdminOrders() {
-  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  let combinedOrders = [...localOrders];
-
-  // 1. Fetch Orders from Supabase database
-  try {
-    const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
-    const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
-
-    const res = await fetch(`${supabaseUrl}/rest/v1/orders?select=*,order_items(*)&order=created_at.desc`, {
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer ' + anonKey
-      }
-    });
-
-    if (res.ok) {
-      const sbOrders = await res.json();
-      if (Array.isArray(sbOrders)) {
-        const mappedSb = sbOrders.map(o => ({
-          id: o.order_number || o.id,
-          _id: o.id,
-          orderId: o.order_number || o.id,
-          customer: o.customer_name || "Customer",
-          total: Number(o.total || 0),
-          grandTotal: Number(o.total || 0),
-          status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending"),
-          date: new Date(o.created_at).toLocaleDateString("en-IN"),
-          phone: o.customer_phone || (o.shipping_address && o.shipping_address.phone) || "9876543210",
-          email: o.customer_email || "",
-          payment: (o.payment_method || "COD").toUpperCase(),
-          address: typeof o.shipping_address === 'object' && o.shipping_address
-            ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
-            : (o.shipping_address || 'N/A'),
-          items: Array.isArray(o.order_items) ? o.order_items.map(item => ({
-            name: item.name || "Product",
-            size: item.size || "M",
-            quantity: item.quantity || 1,
-            price: item.price || 0
-          })) : []
-        }));
-
-        mappedSb.forEach(so => {
-          const idx = combinedOrders.findIndex(lo => String(lo.id) === String(so.id) || String(lo._id) === String(so._id));
-          if (idx === -1) {
-            combinedOrders.unshift(so);
-          } else {
-            // Keep status up to date
-            combinedOrders[idx] = { ...combinedOrders[idx], ...so };
-          }
-        });
-      }
-    }
-  } catch (sbErr) {
-    console.warn("[Admin Orders] Supabase fetch notice:", sbErr.message);
+  const tbody = document.getElementById("orders-body");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:20px; color:#94a3b8;">⏳ Loading orders from database...</td></tr>`;
   }
 
-  // 2. Fetch from REST API fallback
+  let combinedOrders = [];
+
+  // ── SOURCE 1: Supabase (PRIMARY — requires admin Supabase session) ──────────────
+  try {
+    if (!window.supabaseClient) {
+      throw new Error('Supabase client not initialized');
+    }
+
+    // Verify admin has a Supabase session; if not, trigger sign-in
+    const { data: { session } } = await window.supabaseClient.auth.getSession();
+    if (!session) {
+      console.warn('[Admin Orders] No Supabase session. Attempting admin sign-in...');
+      // admin-auth.js exposes signAdminIntoSupabase, but it may not be loaded here
+      // Try a direct sign-in as fallback
+      if (typeof signAdminIntoSupabase === 'function') {
+        await signAdminIntoSupabase();
+      }
+    }
+
+    // Query orders — RLS is_admin() check will pass if admin is signed in
+    const { data: sbOrders, error: sbErr } = await window.supabaseClient
+      .from('orders')
+      .select('*, order_items(*)')
+      .order('created_at', { ascending: false });
+
+    if (sbErr) {
+      console.warn('[Admin Orders] Supabase query error:', sbErr.message, sbErr.code);
+      if (sbErr.code === 'PGRST116' || sbErr.message?.includes('JWT')) {
+        console.warn('[Admin Orders] Auth issue — ensure admin is signed into Supabase.');
+      }
+    } else if (Array.isArray(sbOrders)) {
+      const mappedSb = sbOrders.map(o => ({
+        id: o.order_number || o.id,
+        _id: o.id,
+        orderId: o.order_number || o.id,
+        customer: o.customer_name || "Customer",
+        email: o.customer_email || "",
+        phone: o.customer_phone || (o.shipping_address && o.shipping_address.phone) || "",
+        total: Number(o.total || 0),
+        grandTotal: Number(o.total || 0),
+        status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Processing"),
+        date: new Date(o.created_at).toLocaleDateString("en-IN"),
+        payment: (o.payment_method || "COD").toUpperCase(),
+        paymentStatus: o.payment_status || "Pending",
+        address: typeof o.shipping_address === 'object' && o.shipping_address
+          ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
+          : (o.shipping_address || 'N/A'),
+        razorpayPaymentId: o.razorpay_payment_id || "",
+        items: Array.isArray(o.order_items) ? o.order_items.map(item => ({
+          name: item.name || "Product",
+          size: item.size || "M",
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        })) : []
+      }));
+
+      // Merge Supabase orders — deduplicate by ID
+      mappedSb.forEach(so => {
+        if (!combinedOrders.some(co => String(co.id) === String(so.id) || String(co._id) === String(so._id))) {
+          combinedOrders.push(so);
+        }
+      });
+
+      console.log(`[Admin Orders] ✅ Loaded ${mappedSb.length} orders from Supabase`);
+    }
+  } catch (sbErr) {
+    console.warn("[Admin Orders] Supabase fetch error:", sbErr.message);
+  }
+
+  // ── SOURCE 2: REST API backend (MongoDB) — supplement ──────────────────────────
   try {
     const res = await API.get('/orders', { isAdmin: true });
-    if (res.success && Array.isArray(res.data?.orders)) {
-      const serverOrders = res.data.orders.map(o => ({
-        id: o.orderNumber || o._id,
+    if (res.success && Array.isArray(res.data?.orders || res.data)) {
+      const serverOrderList = res.data?.orders || res.data;
+      const serverOrders = serverOrderList.map(o => ({
+        id: o.orderNumber || o.orderId || o._id,
         _id: o._id,
-        orderId: o.orderNumber || o._id,
-        customer: o.user?.name || o.shippingAddress?.fullName || "Customer",
-        total: o.totalPrice || 0,
-        status: (o.orderStatus ? o.orderStatus.charAt(0).toUpperCase() + o.orderStatus.slice(1) : "Pending"),
-        date: new Date(o.createdAt).toLocaleDateString("en-IN"),
-        phone: o.shippingAddress?.phone || "9876543210",
+        orderId: o.orderNumber || o.orderId || o._id,
+        customer: o.user?.name || o.shippingAddress?.fullName || o.customerName || "Customer",
+        email: o.customerEmail || "",
+        phone: o.shippingAddress?.phone || o.customerPhone || "",
+        total: o.totalPrice || o.total || 0,
+        grandTotal: o.totalPrice || o.total || 0,
+        status: (o.orderStatus ? o.orderStatus.charAt(0).toUpperCase() + o.orderStatus.slice(1) : "Processing"),
+        date: new Date(o.createdAt || Date.now()).toLocaleDateString("en-IN"),
         payment: (o.paymentMethod || "COD").toUpperCase(),
+        paymentStatus: o.paymentStatus || "Pending",
         address: `${o.shippingAddress?.street || ""}, ${o.shippingAddress?.city || ""}`,
         items: Array.isArray(o.orderItems) ? o.orderItems.map(item => ({
           name: item.title || item.name || "Product",
@@ -85,22 +116,31 @@ async function loadAdminOrders() {
       }));
 
       serverOrders.forEach(so => {
-        const idx = combinedOrders.findIndex(lo => String(lo.id) === String(so.id) || String(lo._id) === String(so._id));
-        if (idx === -1) {
-          combinedOrders.unshift(so);
-        } else {
-          if (combinedOrders[idx].status) {
-            so.status = combinedOrders[idx].status;
-          }
+        if (!combinedOrders.some(co => String(co.id) === String(so.id) || String(co._id) === String(so._id))) {
+          combinedOrders.push(so);
         }
       });
     }
   } catch (err) {
-    console.warn("Using local orders list fallback");
+    // REST API offline — continue with Supabase data
   }
 
+  // ── SOURCE 3: localStorage (local device orders only — not shared across devices) ──
+  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
+  localOrders.forEach(lo => {
+    if (!combinedOrders.some(co => String(co.id) === String(lo.id) || String(co.orderId) === String(lo.orderId))) {
+      combinedOrders.push(lo);
+    }
+  });
+
+  // Sort combined orders by date (newest first)
+  combinedOrders.sort((a, b) => {
+    const da = new Date(a.orderDate || a.date || 0);
+    const db = new Date(b.orderDate || b.date || 0);
+    return db - da;
+  });
+
   orders = combinedOrders;
-  localStorage.setItem("orders", JSON.stringify(orders));
   renderOrders();
 }
 
@@ -111,16 +151,20 @@ function renderOrders(filteredOrders = orders) {
   let html = "";
   filteredOrders.forEach(order => {
     const orderIdentifier = order._id || order.id || order.orderId;
-    const currentStatus = order.status || order.orderStatus || "Pending";
+    const currentStatus = order.status || order.orderStatus || "Processing";
     const formattedStatus = currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1).toLowerCase();
 
     html += `
       <tr>
         <td><strong>${order.id || order.orderId}</strong></td>
-        <td>${order.customer}</td>
+        <td>
+          <div>${order.customer}</div>
+          <small style="color:#94a3b8;">${order.email || ''}</small>
+        </td>
         <td>₹${order.total || order.grandTotal || 0}</td>
         <td>
           <select class="status-select ${formattedStatus.toLowerCase()}" onchange="updateOrderStatus('${orderIdentifier}', this.value)">
+            <option value="Processing" ${formattedStatus === "Processing" ? "selected" : ""}>Processing</option>
             <option value="Pending" ${formattedStatus === "Pending" ? "selected" : ""}>Pending</option>
             <option value="Confirmed" ${formattedStatus === "Confirmed" ? "selected" : ""}>Confirmed</option>
             <option value="Packed" ${formattedStatus === "Packed" ? "selected" : ""}>Packed</option>
@@ -134,7 +178,7 @@ function renderOrders(filteredOrders = orders) {
           <div class="action-buttons" style="display:flex; gap:6px;">
             <button class="view-btn" onclick="viewOrder('${orderIdentifier}')">👁 View</button>
             <button class="cancel-btn" onclick="cancelOrder('${orderIdentifier}')" style="background:#ef4444; color:white;">❌ Cancel</button>
-            <button class="delete-btn" onclick="deleteSingleOrder('${orderIdentifier}')" style="background:#dc2626; color:white; padding:4px 8px; border-radius:6px; border:none; cursor:pointer;" title="Delete Test Order">🗑 Delete</button>
+            <button class="delete-btn" onclick="deleteSingleOrder('${orderIdentifier}')" style="background:#dc2626; color:white; padding:4px 8px; border-radius:6px; border:none; cursor:pointer;" title="Delete Order">🗑 Delete</button>
           </div>
         </td>
       </tr>
@@ -152,26 +196,22 @@ function renderOrders(filteredOrders = orders) {
 async function updateOrderStatus(id, status) {
   const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
 
-  // 1. Update orders array in memory
+  // ── Update in-memory list ──
   const order = orders.find(o => String(o.id) === String(id) || String(o._id) === String(id) || String(o.orderId) === String(id));
   if (order) {
     order.status = normalizedStatus;
     order.orderStatus = normalizedStatus;
   }
 
-  // 2. Update orders in localStorage
+  // ── Update localStorage cache ──
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   const localIdx = localOrders.findIndex(lo => String(lo.id) === String(id) || String(lo._id) === String(id) || String(lo.orderId) === String(id));
   if (localIdx > -1) {
     localOrders[localIdx].status = normalizedStatus;
     localOrders[localIdx].orderStatus = normalizedStatus;
     localStorage.setItem("orders", JSON.stringify(localOrders));
-  } else if (order) {
-    localOrders.unshift(order);
-    localStorage.setItem("orders", JSON.stringify(localOrders));
   }
 
-  // 3. Update lastOrder if matching
   const lastOrder = JSON.parse(localStorage.getItem("lastOrder"));
   if (lastOrder && (String(lastOrder.id) === String(id) || String(lastOrder.orderId) === String(id) || String(lastOrder._id) === String(id))) {
     lastOrder.status = normalizedStatus;
@@ -179,34 +219,43 @@ async function updateOrderStatus(id, status) {
     localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
   }
 
-  // 4. Update in Supabase database
+  // ── Update in Supabase (PRIMARY — uses admin Supabase session) ──
   try {
-    const supabaseUrl = window.SUPABASE_URL || 'https://xdetdylcbcvtsuxteeen.supabase.co';
-    const anonKey = window.SUPABASE_ANON_KEY || 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv';
+    if (window.supabaseClient) {
+      // Try update by order_number first, then by UUID
+      const sbOrderRef = order?._id || id;
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sbOrderRef);
 
-    const patchUrl = `${supabaseUrl}/rest/v1/orders?or=(order_number.eq.${encodeURIComponent(id)},id.eq.${encodeURIComponent(id)})`;
-    await fetch(patchUrl, {
-      method: 'PATCH',
-      headers: {
-        'apikey': anonKey,
-        'Authorization': 'Bearer ' + anonKey,
-        'Content-Type': 'application/json',
-        'Prefer': 'return=minimal'
-      },
-      body: JSON.stringify({
-        order_status: normalizedStatus,
-        updated_at: new Date().toISOString()
-      })
-    });
+      let updateQuery;
+      if (isUUID) {
+        updateQuery = window.supabaseClient
+          .from('orders')
+          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
+          .eq('id', sbOrderRef);
+      } else {
+        updateQuery = window.supabaseClient
+          .from('orders')
+          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
+          .eq('order_number', id);
+      }
+
+      const { error: updateErr } = await updateQuery;
+      if (updateErr) {
+        console.warn('[Admin Orders] Supabase status update error:', updateErr.message);
+      } else {
+        console.log('[Admin Orders] ✅ Status updated in Supabase:', id, '→', normalizedStatus);
+      }
+    }
   } catch (sbErr) {
-    console.warn('[Admin Orders] Supabase status update notice:', sbErr.message);
+    console.warn('[Admin Orders] Supabase status update exception:', sbErr.message);
   }
 
-  // 5. Try updating on REST API backend fallback
+  // ── Update on REST API backend (MongoDB) ──
   try {
-    await API.put(`/orders/${id}/status`, { orderStatus: normalizedStatus.toLowerCase() }, { isAdmin: true });
+    const idForApi = order?._id || id;
+    await API.put(`/orders/${idForApi}/status`, { orderStatus: normalizedStatus.toLowerCase() }, { isAdmin: true });
   } catch (err) {
-    // Handled silently
+    // Silently handled
   }
 
   renderOrders();
@@ -220,29 +269,50 @@ async function cancelOrder(id) {
   await updateOrderStatus(id, "Cancelled");
 }
 
-function deleteSingleOrder(id) {
-  if (!confirm("Delete this test order permanently?")) return;
+async function deleteSingleOrder(id) {
+  if (!confirm("Delete this order permanently from Supabase and local cache?")) return;
+
+  // Remove from in-memory list
   orders = orders.filter(o => String(o.id) !== String(id) && String(o._id) !== String(id) && String(o.orderId) !== String(id));
-  localStorage.setItem("orders", JSON.stringify(orders));
+
+  // Remove from localStorage
+  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
+  const updated = localOrders.filter(o => String(o.id) !== String(id) && String(o._id) !== String(id) && String(o.orderId) !== String(id));
+  localStorage.setItem("orders", JSON.stringify(updated));
 
   const lastOrder = JSON.parse(localStorage.getItem("lastOrder"));
   if (lastOrder && (String(lastOrder.id) === String(id) || String(lastOrder.orderId) === String(id))) {
     localStorage.removeItem("lastOrder");
   }
 
+  // Delete from Supabase
+  try {
+    if (window.supabaseClient) {
+      const targetOrder = orders.find(o => String(o._id) === String(id)) || { _id: id };
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetOrder._id || id);
+      if (isUUID) {
+        await window.supabaseClient.from('orders').delete().eq('id', targetOrder._id || id);
+      } else {
+        await window.supabaseClient.from('orders').delete().eq('order_number', id);
+      }
+    }
+  } catch (sbErr) {
+    console.warn('[Admin Orders] Supabase delete notice:', sbErr.message);
+  }
+
   renderOrders();
-  if (typeof showToast === "function") showToast("🗑 Test order deleted");
-  else alert("Test order deleted successfully.");
+  if (typeof showToast === "function") showToast("🗑 Order deleted");
+  else alert("Order deleted.");
 }
 
 function clearAllOrders() {
-  if (!confirm("⚠️ ARE YOU SURE? This will delete ALL test order history and reset total revenue to ₹0 for testing!")) return;
-  orders = [];
+  if (!confirm("⚠️ ARE YOU SURE? This will clear all LOCAL orders from this device only.\nOrders in Supabase database will NOT be deleted.")) return;
+  orders = orders.filter(o => o._id); // Keep only Supabase-sourced orders (those with _id)
   localStorage.removeItem("orders");
   localStorage.removeItem("lastOrder");
   renderOrders();
-  if (typeof showToast === "function") showToast("🗑 All test orders cleared! Revenue reset to ₹0.");
-  else alert("All test orders cleared! Total revenue reset to ₹0.");
+  if (typeof showToast === "function") showToast("🗑 Local device orders cleared.");
+  else alert("Local device orders cleared.");
 }
 
 function viewOrder(id) {
@@ -266,12 +336,14 @@ function viewOrder(id) {
     detailsContainer.innerHTML = `
       <h2>Order ${order.id || order.orderId}</h2><br>
       <p><strong>Customer:</strong> ${order.customer || order.name}</p>
+      <p><strong>Email:</strong> ${order.email || "N/A"}</p>
       <p><strong>Phone:</strong> ${order.phone || "N/A"}</p>
-      <p><strong>Payment:</strong> ${order.payment || "COD"}</p>
+      <p><strong>Payment:</strong> ${order.payment || "COD"} — <em>${order.paymentStatus || 'Pending'}</em></p>
+      ${order.razorpayPaymentId ? `<p><strong>Razorpay ID:</strong> ${order.razorpayPaymentId}</p>` : ''}
       <p><strong>Address:</strong> ${order.address || "N/A"}</p>
-      <p><strong>Current Status:</strong> <span class="badge ${order.status ? order.status.toLowerCase() : 'pending'}">${order.status || 'Pending'}</span></p><br>
+      <p><strong>Current Status:</strong> <span class="badge ${order.status ? order.status.toLowerCase() : 'processing'}">${order.status || 'Processing'}</span></p><br>
       <h3>Ordered Items</h3>
-      <ul>${itemsHTML}</ul>
+      <ul>${itemsHTML || '<li>No item details available</li>'}</ul>
       <h2>Total : ₹${order.total || order.grandTotal || 0}</h2>
     `;
   }
@@ -281,10 +353,10 @@ function viewOrder(id) {
 
 function updateOrderStatistics() {
   const totalOrders = orders.length;
-  const pendingOrders = orders.filter(o => (o.status || "").toLowerCase() === "pending").length;
+  const pendingOrders = orders.filter(o => (o.status || "").toLowerCase() === "pending" || (o.status || "").toLowerCase() === "processing").length;
   const shippedOrders = orders.filter(o => (o.status || "").toLowerCase() === "shipped" || (o.status || "").toLowerCase() === "delivered").length;
-  
-  // DEDUCT CANCELLED ORDERS FROM REVENUE: Only sum non-cancelled orders!
+
+  // Only sum non-cancelled orders for revenue
   const validOrders = orders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
   const revenue = validOrders.reduce((sum, o) => sum + Number(o.total || o.grandTotal || 0), 0);
 
@@ -299,6 +371,30 @@ function updateOrderStatistics() {
   if (revEl) revEl.textContent = "₹" + revenue.toLocaleString();
 }
 
+// Search and filter
+function filterOrders() {
+  const searchVal = (document.getElementById("order-search")?.value || "").toLowerCase();
+  const statusVal = (document.getElementById("status-filter")?.value || "all").toLowerCase();
+
+  let filtered = orders;
+
+  if (statusVal !== "all") {
+    filtered = filtered.filter(o => (o.status || "").toLowerCase() === statusVal);
+  }
+
+  if (searchVal) {
+    filtered = filtered.filter(o =>
+      (o.id || "").toLowerCase().includes(searchVal) ||
+      (o.orderId || "").toLowerCase().includes(searchVal) ||
+      (o.customer || "").toLowerCase().includes(searchVal) ||
+      (o.email || "").toLowerCase().includes(searchVal) ||
+      (o.phone || "").includes(searchVal)
+    );
+  }
+
+  renderOrders(filtered);
+}
+
 function closeOrderModal() {
   const modal = document.getElementById("order-modal");
   if (modal) modal.style.display = "none";
@@ -307,9 +403,19 @@ function closeOrderModal() {
 window.closeOrderModal = closeOrderModal;
 window.clearAllOrders = clearAllOrders;
 window.deleteSingleOrder = deleteSingleOrder;
+window.updateOrderStatus = updateOrderStatus;
+window.cancelOrder = cancelOrder;
+window.viewOrder = viewOrder;
+window.filterOrders = filterOrders;
 
 document.addEventListener("DOMContentLoaded", () => {
   loadAdminOrders();
+
+  const searchInput = document.getElementById("order-search");
+  if (searchInput) searchInput.addEventListener("input", filterOrders);
+
+  const statusFilter = document.getElementById("status-filter");
+  if (statusFilter) statusFilter.addEventListener("change", filterOrders);
 
   const closeModalBtn = document.getElementById("close-modal");
   if (closeModalBtn) {
