@@ -37,7 +37,7 @@ async function loadAdminInquiries() {
       inquiries = data.map(mapInquiryRecord);
       try {
         localStorage.setItem("inquiries", JSON.stringify(inquiries));
-      } catch (e) {}
+      } catch (e) { }
     }
 
   } catch (err) {
@@ -124,56 +124,126 @@ async function toggleInquiryStatus(targetId) {
   const inq = inquiries.find(i => String(i._id) === String(targetId) || String(i.id) === String(targetId));
   if (!inq) return;
 
-  const nextStatus = inq.status === "Resolved" ? "New" : "Resolved";
-  inq.status = nextStatus;
-  renderInquiries();
-  updateInquiryStats();
+  const previousStatus = inq.status || "New";
+  const nextStatus = previousStatus === "Resolved" ? "New" : "Resolved";
 
-  // Persist to Supabase
+  if (typeof showToast === "function") showToast("⏳ Updating inquiry status in database...");
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Inquiries] Admin sign-in check notice:", e);
+    }
+  }
+
+  let dbUpdated = false;
+  let dbError = "";
+
+  // ── Step 2: Persist to Supabase Database ──
   if (window.supabaseClient) {
     try {
       const matchCol = inq._id ? 'id' : 'inquiry_number';
       const matchVal = inq._id || inq.id;
-      const { error } = await window.supabaseClient
+      const { data, error } = await window.supabaseClient
         .from("inquiries")
         .update({ status: nextStatus, updated_at: new Date().toISOString() })
-        .eq(matchCol, matchVal);
+        .eq(matchCol, matchVal)
+        .select();
 
-      if (error) console.warn("[Admin Inquiries] Status update notice:", error.message);
-      else console.log("[Admin Inquiries] ✅ Status updated in database:", nextStatus);
+      if (error) {
+        dbError = error.message;
+        console.error("[Admin Inquiries] ❌ Status update error:", error);
+      } else if (Array.isArray(data) && data.length > 0) {
+        dbUpdated = true;
+        console.log("[Admin Inquiries] ✅ Status updated in database:", nextStatus);
+      } else {
+        dbUpdated = true;
+      }
     } catch (e) {
-      console.warn("[Admin Inquiries] Supabase update error:", e);
+      dbError = e.message;
+      console.error("[Admin Inquiries] Supabase update exception:", e);
     }
   }
 
-  try { localStorage.setItem("inquiries", JSON.stringify(inquiries)); } catch (e) {}
+  if (!dbUpdated && window.supabaseClient) {
+    alert(`❌ Failed to update inquiry status in database: ${dbError || "Permission denied or network failure."}`);
+    return;
+  }
+
+  // ── Step 3: Confirmed Success — update local state ──
+  inq.status = nextStatus;
+  renderInquiries();
+  updateInquiryStats();
+
+  try { localStorage.setItem("inquiries", JSON.stringify(inquiries)); } catch (e) { }
   if (typeof showToast === "function") showToast(`Inquiry status updated to ${nextStatus}`);
 }
 
 async function deleteInquiry(targetId) {
-  if (!confirm("Are you sure you want to delete this inquiry from the database?")) return;
-
   const inq = inquiries.find(i => String(i._id) === String(targetId) || String(i.id) === String(targetId));
+  const inqRef = inq?.id || inq?._id || targetId;
+
+  if (!confirm(`Are you sure you want to permanently delete inquiry "${inqRef}" from the database?`)) return;
+
+  if (typeof showToast === "function") showToast("⏳ Deleting inquiry from database...");
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Inquiries] Admin sign-in check notice:", e);
+    }
+  }
+
+  let dbDeleted = false;
+  let dbError = "";
+
+  // ── Step 2: Delete from Supabase Database ──
+  if (window.supabaseClient) {
+    try {
+      const matchCol = inq?._id ? 'id' : 'inquiry_number';
+      const matchVal = inq?._id || inq?.id || targetId;
+      const { data, error } = await window.supabaseClient
+        .from("inquiries")
+        .delete()
+        .eq(matchCol, matchVal)
+        .select();
+
+      if (error) {
+        dbError = error.message;
+        console.error("[Admin Inquiries] ❌ Delete error:", error);
+      } else if (Array.isArray(data) && data.length > 0) {
+        dbDeleted = true;
+        console.log("[Admin Inquiries] ✅ Deleted from database:", targetId);
+      } else {
+        // Double check if record is gone
+        const { data: checkData } = await window.supabaseClient
+          .from("inquiries")
+          .select("id")
+          .eq(matchCol, matchVal);
+        if (!checkData || checkData.length === 0) dbDeleted = true;
+      }
+    } catch (e) {
+      dbError = e.message;
+      console.error("[Admin Inquiries] Delete exception:", e);
+    }
+  }
+
+  if (!dbDeleted && inq?._id) {
+    alert(`❌ Failed to delete inquiry from database!\nError: ${dbError || "Permission denied or session expired."}`);
+    return; // STOP — do not pretend it worked!
+  }
+
+  // ── Step 3: Confirmed Success — update local state ──
   inquiries = inquiries.filter(i => String(i._id) !== String(targetId) && String(i.id) !== String(targetId));
   renderInquiries();
   updateInquiryStats();
 
-  if (window.supabaseClient && inq) {
-    try {
-      const matchCol = inq._id ? 'id' : 'inquiry_number';
-      const matchVal = inq._id || inq.id;
-      await window.supabaseClient
-        .from("inquiries")
-        .delete()
-        .eq(matchCol, matchVal);
-      console.log("[Admin Inquiries] ✅ Deleted from database:", targetId);
-    } catch (e) {
-      console.warn("[Admin Inquiries] Delete error:", e);
-    }
-  }
-
-  try { localStorage.setItem("inquiries", JSON.stringify(inquiries)); } catch (e) {}
-  if (typeof showToast === "function") showToast("Inquiry deleted");
+  try { localStorage.setItem("inquiries", JSON.stringify(inquiries)); } catch (e) { }
+  if (typeof showToast === "function") showToast("🗑 Inquiry deleted permanently from database.");
 }
 
 function setupInquiriesRealtime() {

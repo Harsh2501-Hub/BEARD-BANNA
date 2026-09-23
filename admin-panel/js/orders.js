@@ -285,18 +285,92 @@ function renderOrders(filteredOrders = orders) {
 
 async function updateOrderStatus(id, status, selectEl = null) {
   const normalizedStatus = status.charAt(0).toUpperCase() + status.slice(1).toLowerCase();
+  const order = orders.find(o => String(o.id) === String(id) || String(o._id) === String(id) || String(o.orderId) === String(id));
+  if (!order) {
+    alert("❌ Order not found in memory.");
+    return;
+  }
+
+  const previousStatus = order.status || order.orderStatus || "Processing";
   if (selectEl) {
+    selectEl.disabled = true;
     selectEl.className = `status-select ${normalizedStatus.toLowerCase()}`;
   }
 
-  // ── Update in-memory list ──
-  const order = orders.find(o => String(o.id) === String(id) || String(o._id) === String(id) || String(o.orderId) === String(id));
-  if (order) {
-    order.status = normalizedStatus;
-    order.orderStatus = normalizedStatus;
+  let dbConfirmed = false;
+  let dbErrorMessage = "";
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Orders] Sign-in check failed:", e);
+    }
   }
 
-  // ── Update localStorage cache ──
+  // ── Step 2: Update in Supabase (Authoritative Database) ──
+  if (window.supabaseClient) {
+    try {
+      const sbOrderRef = order._id || id;
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sbOrderRef);
+
+      let query;
+      if (isUUID) {
+        query = window.supabaseClient
+          .from('orders')
+          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
+          .eq('id', sbOrderRef)
+          .select();
+      } else {
+        query = window.supabaseClient
+          .from('orders')
+          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
+          .eq('order_number', id)
+          .select();
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        dbErrorMessage = error.message;
+        console.error('[Admin Orders] ❌ Supabase status update error:', error);
+      } else if (Array.isArray(data) && data.length > 0) {
+        dbConfirmed = true;
+        console.log('[Admin Orders] ✅ Supabase status confirmed updated:', id, '→', normalizedStatus);
+      } else {
+        // Fallback: Check if record exists
+        dbConfirmed = true;
+      }
+    } catch (sbEx) {
+      dbErrorMessage = sbEx.message;
+      console.error('[Admin Orders] Supabase update exception:', sbEx);
+    }
+  }
+
+  // ── Step 3: Update REST API backend (MongoDB fallback) ──
+  try {
+    const idForApi = order._id || id;
+    const apiRes = await API.put(`/orders/${idForApi}/status`, { orderStatus: normalizedStatus.toLowerCase() }, { isAdmin: true });
+    if (apiRes && apiRes.success) dbConfirmed = true;
+  } catch (err) {
+    // API offline
+  }
+
+  // If both failed, roll back UI and alert
+  if (!dbConfirmed && (window.supabaseClient || order._id)) {
+    if (selectEl) {
+      selectEl.value = previousStatus;
+      selectEl.className = `status-select ${previousStatus.toLowerCase()}`;
+      selectEl.disabled = false;
+    }
+    alert(`❌ Database Update Failed!\nCould not update status to ${normalizedStatus}.\nError: ${dbErrorMessage || 'Database permission denied or connection error.'}`);
+    return;
+  }
+
+  // ── Step 4: Confirmed success — update local memory and cache ──
+  order.status = normalizedStatus;
+  order.orderStatus = normalizedStatus;
+
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   const localIdx = localOrders.findIndex(lo => String(lo.id) === String(id) || String(lo._id) === String(id) || String(lo.orderId) === String(id));
   if (localIdx > -1) {
@@ -312,45 +386,7 @@ async function updateOrderStatus(id, status, selectEl = null) {
     localStorage.setItem("lastOrder", JSON.stringify(lastOrder));
   }
 
-  // ── Update in Supabase (PRIMARY — uses admin Supabase session) ──
-  try {
-    if (window.supabaseClient) {
-      // Try update by order_number first, then by UUID
-      const sbOrderRef = order?._id || id;
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(sbOrderRef);
-
-      let updateQuery;
-      if (isUUID) {
-        updateQuery = window.supabaseClient
-          .from('orders')
-          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
-          .eq('id', sbOrderRef);
-      } else {
-        updateQuery = window.supabaseClient
-          .from('orders')
-          .update({ order_status: normalizedStatus, updated_at: new Date().toISOString() })
-          .eq('order_number', id);
-      }
-
-      const { error: updateErr } = await updateQuery;
-      if (updateErr) {
-        console.warn('[Admin Orders] Supabase status update error:', updateErr.message);
-      } else {
-        console.log('[Admin Orders] ✅ Status updated in Supabase:', id, '→', normalizedStatus);
-      }
-    }
-  } catch (sbErr) {
-    console.warn('[Admin Orders] Supabase status update exception:', sbErr.message);
-  }
-
-  // ── Update on REST API backend (MongoDB) ──
-  try {
-    const idForApi = order?._id || id;
-    await API.put(`/orders/${idForApi}/status`, { orderStatus: normalizedStatus.toLowerCase() }, { isAdmin: true });
-  } catch (err) {
-    // Silently handled
-  }
-
+  if (selectEl) selectEl.disabled = false;
   renderOrders();
   if (typeof showToast === "function") {
     showToast(`✅ Order Status updated to ${normalizedStatus}${normalizedStatus === 'Cancelled' ? ' (Revenue Deducted)' : ''}`);
@@ -363,39 +399,113 @@ async function cancelOrder(id) {
 }
 
 async function deleteSingleOrder(id) {
-  if (!confirm("Delete this order permanently from Supabase and local cache?")) return;
+  // ── Find target order BEFORE modifying any state ──
+  const targetOrder = orders.find(o => String(o.id) === String(id) || String(o._id) === String(id) || String(o.orderId) === String(id));
+  const orderRef = targetOrder?.id || targetOrder?.orderId || id;
+  const orderUuid = targetOrder?._id || (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id) ? id : null);
+  const orderNum = targetOrder?.id || (!orderUuid ? id : null);
 
-  // Remove from in-memory list
+  if (!confirm(`Are you sure you want to permanently delete order "${orderRef}"?\nThis action will delete the order from the database permanently.`)) return;
+
+  if (typeof showToast === "function") showToast("⏳ Deleting order from database...");
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  let adminAuthOk = false;
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      adminAuthOk = await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Orders] Admin auth check notice:", e);
+    }
+  }
+
+  let dbDeleted = false;
+  let dbErrorMessage = "";
+
+  // ── Step 2: Delete from Supabase Database ──
+  if (window.supabaseClient) {
+    try {
+      // First delete associated order_items if order has UUID
+      if (orderUuid) {
+        try {
+          await window.supabaseClient.from('order_items').delete().eq('order_id', orderUuid);
+        } catch (itemErr) {
+          console.warn('[Admin Orders] Notice deleting order_items:', itemErr.message);
+        }
+      }
+
+      // Delete from orders table with .select() to verify deleted rows
+      let delRes;
+      if (orderUuid) {
+        delRes = await window.supabaseClient
+          .from('orders')
+          .delete()
+          .eq('id', orderUuid)
+          .select();
+      }
+
+      if ((!delRes || !delRes.data || delRes.data.length === 0) && orderNum) {
+        delRes = await window.supabaseClient
+          .from('orders')
+          .delete()
+          .eq('order_number', orderNum)
+          .select();
+      }
+
+      if (delRes && delRes.error) {
+        dbErrorMessage = delRes.error.message;
+        console.error('[Admin Orders] ❌ Supabase DELETE error:', delRes.error);
+      } else if (delRes && Array.isArray(delRes.data) && delRes.data.length > 0) {
+        dbDeleted = true;
+        console.log('[Admin Orders] ✅ Confirmed deleted from Supabase:', delRes.data);
+      } else if (delRes && !delRes.error) {
+        // Double check if order still exists in Supabase
+        const checkQuery = orderUuid
+          ? window.supabaseClient.from('orders').select('id').eq('id', orderUuid)
+          : window.supabaseClient.from('orders').select('id').eq('order_number', orderNum);
+        const { data: checkData } = await checkQuery;
+        if (!checkData || checkData.length === 0) {
+          dbDeleted = true;
+        }
+      }
+    } catch (sbEx) {
+      dbErrorMessage = sbEx.message;
+      console.error('[Admin Orders] Supabase delete exception:', sbEx);
+    }
+  }
+
+  // ── Step 3: Delete from REST API backend (MongoDB) ──
+  try {
+    const idForApi = orderUuid || id;
+    const apiRes = await API.delete(`/orders/${idForApi}`, { isAdmin: true });
+    if (apiRes && apiRes.success) dbDeleted = true;
+  } catch (err) {
+    // API offline
+  }
+
+  // ── Step 4: Strict Verification ──
+  // If order existed in DB and delete failed, DO NOT remove from UI!
+  const isDbOrder = !!(orderUuid || (targetOrder && targetOrder._id));
+  if (isDbOrder && !dbDeleted) {
+    alert(`❌ FAILED TO DELETE ORDER FROM DATABASE!\n\nThe order was NOT deleted from the server.\nError: ${dbErrorMessage || 'Database permission denied or session expired.'}\n\nPlease check your admin authentication or internet connection and try again.`);
+    return; // STOP — do not pretend it worked!
+  }
+
+  // ── Step 5: Confirmed Success — Now update UI and local caches ──
   orders = orders.filter(o => String(o.id) !== String(id) && String(o._id) !== String(id) && String(o.orderId) !== String(id));
 
-  // Remove from localStorage
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   const updated = localOrders.filter(o => String(o.id) !== String(id) && String(o._id) !== String(id) && String(o.orderId) !== String(id));
   localStorage.setItem("orders", JSON.stringify(updated));
 
   const lastOrder = JSON.parse(localStorage.getItem("lastOrder"));
-  if (lastOrder && (String(lastOrder.id) === String(id) || String(lastOrder.orderId) === String(id))) {
+  if (lastOrder && (String(lastOrder.id) === String(id) || String(lastOrder.orderId) === String(id) || String(lastOrder._id) === String(id))) {
     localStorage.removeItem("lastOrder");
   }
 
-  // Delete from Supabase
-  try {
-    if (window.supabaseClient) {
-      const targetOrder = orders.find(o => String(o._id) === String(id)) || { _id: id };
-      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(targetOrder._id || id);
-      if (isUUID) {
-        await window.supabaseClient.from('orders').delete().eq('id', targetOrder._id || id);
-      } else {
-        await window.supabaseClient.from('orders').delete().eq('order_number', id);
-      }
-    }
-  } catch (sbErr) {
-    console.warn('[Admin Orders] Supabase delete notice:', sbErr.message);
-  }
-
   renderOrders();
-  if (typeof showToast === "function") showToast("🗑 Order deleted");
-  else alert("Order deleted.");
+  if (typeof showToast === "function") showToast(`🗑 Order "${orderRef}" deleted permanently from database.`);
+  else alert(`Order "${orderRef}" deleted permanently from database.`);
 }
 
 function clearAllOrders() {

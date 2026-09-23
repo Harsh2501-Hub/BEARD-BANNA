@@ -1,73 +1,132 @@
 // ===============================
-// ADMIN CUSTOMERS - REAL-TIME ORDER & PERMANENT DELETE SYNC
+// ADMIN CUSTOMERS - SUPABASE PROFILES & LIVE ORDERS
 // ===============================
 
 let customers = [];
 
 async function loadAdminCustomers() {
+  const tbody = document.getElementById("customers-body");
+  if (tbody) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding:25px; color:#94a3b8;">⏳ Loading customer directory from database...</td></tr>`;
+  }
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Customers] Sign-in notice:", e);
+    }
+  }
+
+  let dbProfiles = [];
+  let dbOrders = [];
+
+  // ── Step 2: Fetch Profiles & Orders from Supabase ──
+  if (window.supabaseClient) {
+    try {
+      const [profilesRes, ordersRes] = await Promise.all([
+        window.supabaseClient.from('profiles').select('*').order('created_at', { ascending: false }),
+        window.supabaseClient.from('orders').select('id, order_number, customer_name, customer_email, customer_phone, total, order_status, shipping_address, created_at')
+      ]);
+
+      if (Array.isArray(profilesRes.data)) dbProfiles = profilesRes.data;
+      if (Array.isArray(ordersRes.data)) dbOrders = ordersRes.data;
+    } catch (sbErr) {
+      console.warn("[Admin Customers] Supabase query notice:", sbErr);
+    }
+  }
+
+  // Fallback to local storage if DB is unreachable
   const localUsers = JSON.parse(localStorage.getItem("users")) || [];
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   const deletedCustomers = JSON.parse(localStorage.getItem("deleted_customers")) || [];
-  
-  // Filter out cancelled orders for accurate spending metrics
-  const activeOrders = localOrders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
 
-  let combinedCustomers = [];
+  // Merge orders: exclude Cancelled orders from spending
+  const allOrders = (dbOrders.length > 0 ? dbOrders : localOrders).map(o => ({
+    id: o.order_number || o.id,
+    customer: o.customer_name || o.customer || "Customer",
+    email: (o.customer_email || o.email || "").toLowerCase(),
+    phone: o.customer_phone || o.phone || "",
+    total: Number(o.total || o.grandTotal || 0),
+    status: o.order_status || o.status || "Pending",
+    date: o.created_at ? new Date(o.created_at).toLocaleDateString("en-IN") : (o.date || "Today"),
+    address: typeof o.shipping_address === 'object' && o.shipping_address
+      ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
+      : (o.shipping_address || o.address || "Default Address")
+  })).filter(o => !deletedCustomers.includes(o.email));
 
-  // 1. Process local registered users
+  const activeOrders = allOrders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
+
+  const combinedMap = new Map();
+
+  // 1. Process Supabase Profiles (Registered customers)
+  dbProfiles.forEach(p => {
+    const email = (p.email || "").toLowerCase();
+    if (p.role === 'admin' && email === 'beardbanna07773@gmail.com') return; // Hide primary admin account
+    if (deletedCustomers.includes(String(p.id)) || (email && deletedCustomers.includes(email))) return;
+
+    const userOrders = activeOrders.filter(o => (email && o.email === email) || (p.full_name && o.customer.toLowerCase() === p.full_name.toLowerCase()));
+    const spent = userOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+    combinedMap.set(email || p.id, {
+      id: p.id,
+      _dbProfile: true,
+      name: p.full_name || p.email?.split('@')[0] || "Customer",
+      email: p.email || "N/A",
+      phone: p.phone || (userOrders[0]?.phone) || "N/A",
+      orders: userOrders.length,
+      spent: spent,
+      joined: p.created_at ? new Date(p.created_at).toLocaleDateString("en-IN") : "Recent",
+      status: "Active",
+      address: userOrders[0]?.address || "Default Address"
+    });
+  });
+
+  // 2. Process Local Registered Users (Fallback/Local accounts)
   localUsers.forEach(u => {
-    const isDeleted = deletedCustomers.includes(String(u.id)) || (u.email && deletedCustomers.includes(u.email.toLowerCase()));
-    if (!isDeleted) {
-      const userOrders = activeOrders.filter(o => (
-        (o.customer && typeof o.customer === "string" && o.customer.toLowerCase() === u.name.toLowerCase()) ||
-        (o.email && o.email.toLowerCase() === u.email.toLowerCase())
-      ));
-      const spent = userOrders.reduce((sum, o) => sum + Number(o.total || o.grandTotal || 0), 0);
+    const email = (u.email || "").toLowerCase();
+    if (deletedCustomers.includes(String(u.id)) || (email && deletedCustomers.includes(email))) return;
+    if (email && combinedMap.has(email)) return;
 
-      combinedCustomers.push({
-        id: u.id || String(Date.now()),
-        name: u.name,
-        email: u.email,
-        phone: u.phone || "N/A",
+    const userOrders = activeOrders.filter(o => (email && o.email === email) || (u.name && o.customer.toLowerCase() === u.name.toLowerCase()));
+    const spent = userOrders.reduce((sum, o) => sum + (o.total || 0), 0);
+
+    combinedMap.set(email || u.id, {
+      id: u.id || String(Date.now()),
+      name: u.name || "Customer",
+      email: u.email || "N/A",
+      phone: u.phone || (userOrders[0]?.phone) || "N/A",
+      orders: userOrders.length,
+      spent: spent,
+      joined: u.joined || "Recent",
+      status: u.status || "Active",
+      address: userOrders[0]?.address || "Default Address"
+    });
+  });
+
+  // 3. Process Guest Checkout Customers from Orders
+  allOrders.forEach(o => {
+    const email = (o.email || "").toLowerCase();
+    if (email && !deletedCustomers.includes(email) && !combinedMap.has(email)) {
+      const userOrders = activeOrders.filter(ord => ord.email === email);
+      const spent = userOrders.reduce((sum, ord) => sum + (ord.total || 0), 0);
+
+      combinedMap.set(email, {
+        id: "guest_" + (email || Date.now()),
+        name: o.customer || "Guest Customer",
+        email: email || "N/A",
+        phone: o.phone || "N/A",
         orders: userOrders.length,
         spent: spent,
-        joined: u.joined || new Date().toLocaleDateString("en-IN"),
-        status: u.status || "Active",
-        address: userOrders[0]?.address || "Default Address"
+        joined: o.date || "Recent",
+        status: "Active",
+        address: o.address || "Order Address"
       });
     }
   });
 
-  // 2. Process orders from localStorage to capture any guest checkout users
-  activeOrders.forEach(o => {
-    const name = typeof o.customer === "string" ? o.customer : o.customer?.name;
-    const email = o.email || o.customer?.email;
-
-    if (name && email) {
-      const isDeleted = deletedCustomers.includes(email.toLowerCase());
-      if (!isDeleted && !combinedCustomers.some(c => c.email.toLowerCase() === email.toLowerCase())) {
-        const userOrders = activeOrders.filter(ord => (
-          (ord.email && ord.email.toLowerCase() === email.toLowerCase()) ||
-          (ord.customer && typeof ord.customer === "string" && ord.customer.toLowerCase() === name.toLowerCase())
-        ));
-        const spent = userOrders.reduce((sum, ord) => sum + Number(ord.total || ord.grandTotal || 0), 0);
-
-        combinedCustomers.push({
-          id: String(Date.now()),
-          name: name,
-          email: email,
-          phone: o.phone || o.customer?.phone || "N/A",
-          orders: userOrders.length,
-          spent: spent,
-          joined: o.date || new Date().toLocaleDateString("en-IN"),
-          status: "Active",
-          address: o.address || "Order Address"
-        });
-      }
-    }
-  });
-
-  customers = combinedCustomers;
+  customers = Array.from(combinedMap.values());
   renderCustomers();
   updateCustomerStats();
   updateCustomerAnalytics();
@@ -170,28 +229,52 @@ function toggleCustomerStatus(id) {
 }
 
 async function deleteCustomer(id) {
-  if (!confirm("Are you sure you want to permanently delete this customer account?")) return;
-
   const target = customers.find(c => String(c.id) === String(id));
   const email = target ? target.email : null;
+  const name = target ? target.name : id;
 
-  // 1. Add ID & Email to persistent deleted_customers registry
+  if (!confirm(`Are you sure you want to permanently delete customer "${name}"?\nThis action will remove their record from database.`)) return;
+
+  if (typeof showToast === "function") showToast("⏳ Deleting customer from database...");
+
+  // 1. Ensure active Supabase Admin Session
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {}
+  }
+
+  // 2. Delete from Supabase profiles if UUID or email matches
+  if (window.supabaseClient) {
+    try {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (isUUID) {
+        await window.supabaseClient.from('profiles').delete().eq('id', id);
+      } else if (email && email !== "N/A") {
+        await window.supabaseClient.from('profiles').delete().eq('email', email);
+      }
+    } catch (sbErr) {
+      console.warn("[Admin Customers] Supabase profile delete notice:", sbErr);
+    }
+  }
+
+  // 3. Add ID & Email to persistent deleted_customers registry
   const deletedCustomers = JSON.parse(localStorage.getItem("deleted_customers")) || [];
   if (id && !deletedCustomers.includes(String(id))) deletedCustomers.push(String(id));
-  if (email && !deletedCustomers.includes(email.toLowerCase())) deletedCustomers.push(email.toLowerCase());
+  if (email && email !== "N/A" && !deletedCustomers.includes(email.toLowerCase())) deletedCustomers.push(email.toLowerCase());
   localStorage.setItem("deleted_customers", JSON.stringify(deletedCustomers));
 
-  // 2. Remove from localStorage.users
+  // 4. Remove from localStorage.users
   let localUsers = JSON.parse(localStorage.getItem("users")) || [];
-  localUsers = localUsers.filter(u => String(u.id) !== String(id) && (email ? u.email.toLowerCase() !== email.toLowerCase() : true));
+  localUsers = localUsers.filter(u => String(u.id) !== String(id) && (email ? u.email?.toLowerCase() !== email.toLowerCase() : true));
   localStorage.setItem("users", JSON.stringify(localUsers));
 
-  // 3. Try REST API Backend Delete
+  // 5. Try REST API Backend Delete
   try {
     await API.delete(`/users/${id}`, { isAdmin: true });
   } catch (err) {}
 
-  // 4. Update in-memory array & re-render
+  // 6. Update in-memory array & re-render
   customers = customers.filter(c => String(c.id) !== String(id));
   renderCustomers();
   updateCustomerStats();

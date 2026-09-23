@@ -167,30 +167,7 @@ function getLocalReviews(prodId, page, sort, ratingFilter, verifiedFilter) {
 
   let allStorageReviews = [];
   if (!isClearedAll) {
-    allStorageReviews = JSON.parse(localStorage.getItem(`reviews_${prodId}`)) || [
-      {
-        id: "rev-1",
-        user: { name: "Rana Harshvardhan", email: "harsh@rajputana.com" },
-        rating: 5,
-        title: "Pure Rajputana Royalty!",
-        comment: "The embroidery and gold detailing on the chest scripture are unmatched. Fabric feels heavy, 100% premium cotton.",
-        isVerifiedPurchase: true,
-        createdAt: new Date().toISOString(),
-        helpfulCount: 14,
-        variantInfo: { size: "L" }
-      },
-      {
-        id: "rev-2",
-        user: { name: "Kunwar Vikram Singh", email: "vikram@rajputana.com" },
-        rating: 5,
-        title: "Regal Comfort & Perfect Fit",
-        comment: "Wore it to our family royal gathering. Received so many compliments! Definite must-buy for anyone proud of their lineage.",
-        isVerifiedPurchase: true,
-        createdAt: new Date(Date.now() - 86400000 * 2).toISOString(),
-        helpfulCount: 9,
-        variantInfo: { size: "XL" }
-      }
-    ];
+    allStorageReviews = JSON.parse(localStorage.getItem(`reviews_${prodId}`)) || [];
   }
 
   // Filter out any deleted review IDs

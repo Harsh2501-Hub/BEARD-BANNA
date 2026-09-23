@@ -53,35 +53,7 @@ function getLocalAdminReviews() {
     }
   }
 
-  // Sample default reviews if local is empty & not deleted
-  if (all.length === 0 && !localStorage.getItem("admin_cleared_all_reviews")) {
-    all = [
-      {
-        _id: "rev-101",
-        id: "rev-101",
-        user: { name: "Rana Harshvardhan", email: "harsh@rajputana.com" },
-        product: { title: "Royal Warrior Embroidered Tee", _id: "1" },
-        rating: 5,
-        title: "Pure Rajputana Royalty!",
-        comment: "The embroidery and gold detailing on the chest scripture are unmatched. Fabric feels heavy, 100% premium cotton.",
-        isVerifiedPurchase: true,
-        status: "approved",
-        createdAt: new Date().toISOString()
-      },
-      {
-        _id: "rev-102",
-        id: "rev-102",
-        user: { name: "Kunwar Vikram Singh", email: "vikram@rajputana.com" },
-        product: { title: "Imperial Heritage Hoodie", _id: "2" },
-        rating: 5,
-        title: "Regal Comfort & Perfect Fit",
-        comment: "Wore it to our family royal gathering. Received so many compliments! Definite must-buy for anyone proud of their lineage.",
-        isVerifiedPurchase: true,
-        status: "approved",
-        createdAt: new Date(Date.now() - 86400000).toISOString()
-      }
-    ];
-  }
+
 
   // Filter out deleted review IDs
   all = all.filter(r => !deletedIds.includes(String(r._id)) && !deletedIds.includes(String(r.id)));

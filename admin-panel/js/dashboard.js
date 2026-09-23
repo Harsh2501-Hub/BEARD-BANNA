@@ -20,56 +20,64 @@ async function loadDashboardMetrics() {
     updateGSTUI(typeof isGSTEnabled === "function" ? isGSTEnabled() : false, false, false);
   }
 
-  // 1. Load Orders from localStorage
-  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  let combinedOrders = [...localOrders];
-
-  // 1.1 Load Orders from Supabase using authenticated admin session
-  // (Using supabaseClient so is_admin() RLS check passes with admin JWT)
-  try {
-    if (!window.supabaseClient) {
-      throw new Error('Supabase client not initialized');
+  // ── Step 0: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Dashboard] Admin sign-in notice:", e);
     }
+  }
 
-    const { data: sbOrders, error: sbErr } = await window.supabaseClient
-      .from('orders')
-      .select('id, order_number, customer_name, total, order_status, created_at')
-      .order('created_at', { ascending: false })
-      .limit(50);
+  // ── Step 1: Load Orders from Supabase (PRIMARY SOURCE OF TRUTH) ──
+  let combinedOrders = [];
+  let dbOrdersLoaded = false;
 
-    if (sbErr) {
-      console.warn('[Dashboard] Supabase query notice:', sbErr.message);
-    } else if (Array.isArray(sbOrders)) {
-      sbOrders.forEach(o => {
-        const so = {
-          id: o.order_number || o.id,
-          _id: o.id,
-          orderId: o.order_number || o.id,
-          customer: o.customer_name || "Customer",
-          amount: "₹" + (o.total || 0),
-          total: Number(o.total || 0),
-          status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending"),
-          date: new Date(o.created_at).toLocaleDateString("en-IN")
-        };
-        if (!combinedOrders.some(lo => String(lo.id) === String(so.id) || String(lo._id) === String(so._id))) {
-          combinedOrders.push(so);
-        }
-      });
-      console.log('[Dashboard] Loaded', sbOrders.length, 'orders from Supabase');
+  try {
+    if (window.supabaseClient) {
+      const { data: sbOrders, error: sbErr } = await window.supabaseClient
+        .from('orders')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (sbErr) {
+        console.warn('[Dashboard] Supabase query notice:', sbErr.message);
+      } else if (Array.isArray(sbOrders)) {
+        dbOrdersLoaded = true;
+        sbOrders.forEach(o => {
+          combinedOrders.push({
+            id: o.order_number || o.id,
+            _id: o.id,
+            orderId: o.order_number || o.id,
+            customer: o.customer_name || "Customer",
+            email: o.customer_email || "",
+            amount: "₹" + (o.total || 0),
+            total: Number(o.total || 0),
+            status: (o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending"),
+            date: new Date(o.created_at).toLocaleDateString("en-IN")
+          });
+        });
+        console.log('[Dashboard] Loaded', combinedOrders.length, 'live orders from Supabase');
+      }
     }
   } catch (sbErr) {
     console.warn('[Dashboard] Supabase metrics notice:', sbErr.message);
   }
 
-  // 2. Load Inquiries from Supabase (PRIMARY)
+  // If Supabase was unreachable, fallback to local storage
+  if (!dbOrdersLoaded) {
+    const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
+    combinedOrders = [...localOrders];
+  }
+
+  // ── Step 2: Load Inquiries from Supabase (PRIMARY) ──
   let inquiries = [];
   try {
     if (window.supabaseClient) {
       const { data: sbInqs, error: inqErr } = await window.supabaseClient
         .from('inquiries')
         .select('*')
-        .order('created_at', { ascending: false })
-        .limit(20);
+        .order('created_at', { ascending: false });
       if (Array.isArray(sbInqs)) {
         inquiries = sbInqs.map(i => ({
           id: i.inquiry_number || i.id,
@@ -88,89 +96,84 @@ async function loadDashboardMetrics() {
     console.warn("[Dashboard] Supabase inquiries fetch error:", e);
   }
 
-  if (inquiries.length === 0) {
+  if (inquiries.length === 0 && !window.supabaseClient) {
     const localInqs = JSON.parse(localStorage.getItem("inquiries") || "[]");
     inquiries = localInqs.filter(i => !i.id?.startsWith("INQ-981241"));
   }
 
-  // 3. Try loading backend dashboard stats
-  try {
-    const res = await API.get('/admin/dashboard-stats', { isAdmin: true });
-    if (res.success && res.data?.metrics) {
-      stats.totalUsers = res.data.metrics.totalUsers || 0;
-      stats.totalProducts = res.data.metrics.totalProducts || 0;
-      stats.totalOrders = res.data.metrics.totalOrders || 0;
-      stats.totalRevenue = res.data.metrics.totalRevenue || 0;
-    }
-  } catch (err) {
-    // Silently continue to use aggregated orders
-  }
-
-  try {
-    const orderRes = await API.get('/orders', { isAdmin: true });
-    if (orderRes.success && Array.isArray(orderRes.data?.orders)) {
-      const serverOrders = orderRes.data.orders.map(o => ({
-        id: o.orderNumber || o._id,
-        _id: o._id,
-        customer: o.user?.name || o.shippingAddress?.fullName || "Customer",
-        amount: "₹" + (o.totalPrice || 0),
-        total: o.totalPrice || 0,
-        status: (o.orderStatus ? o.orderStatus.charAt(0).toUpperCase() + o.orderStatus.slice(1) : "Pending"),
-        date: new Date(o.createdAt).toLocaleDateString("en-IN")
-      }));
-
-      serverOrders.forEach(so => {
-        if (!combinedOrders.some(lo => lo.id === so.id || lo._id === so._id)) {
-          combinedOrders.push(so);
-        }
-      });
-    }
-  } catch (e) {}
-
-  // 4. Compute Products Count
-  const localProducts = JSON.parse(localStorage.getItem("products")) || [];
-  stats.totalProducts = localProducts.length > 0 ? localProducts.length : (stats.totalProducts || 0);
-
-  // 5. Compute Customers Count dynamically (excluding deleted customers)
-  const localUsers = JSON.parse(localStorage.getItem("users")) || [];
+  // ── Step 3: Load Customers from Supabase profiles + orders ──
+  let activeUsers = [];
   const deletedCustomers = JSON.parse(localStorage.getItem("deleted_customers")) || [];
-  const activeUsers = localUsers.filter(u => !deletedCustomers.includes(String(u.id)) && (!u.email || !deletedCustomers.includes(u.email.toLowerCase())));
-  
-  // Also collect customer count from active non-deleted guest orders
+
+  try {
+    if (window.supabaseClient) {
+      const { data: profiles, error: profErr } = await window.supabaseClient
+        .from('profiles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (Array.isArray(profiles)) {
+        profiles.forEach(p => {
+          const email = (p.email || "").toLowerCase();
+          if (p.role === 'admin' && email === 'beardbanna07773@gmail.com') return; // Hide admin
+          if (deletedCustomers.includes(String(p.id)) || (email && deletedCustomers.includes(email))) return;
+
+          activeUsers.push({
+            id: p.id,
+            name: p.full_name || p.email?.split('@')[0] || "Customer",
+            email: p.email || "N/A",
+            phone: p.phone || "N/A"
+          });
+        });
+      }
+    }
+  } catch (pErr) {}
+
+  // Also include distinct guest order customers
   const validOrders = combinedOrders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
-  const guestEmails = new Set();
   validOrders.forEach(o => {
-    const email = o.email || o.customer?.email;
-    if (email && !deletedCustomers.includes(email.toLowerCase()) && !activeUsers.some(u => u.email?.toLowerCase() === email.toLowerCase())) {
-      guestEmails.add(email.toLowerCase());
+    const email = (o.email || "").toLowerCase();
+    if (email && !deletedCustomers.includes(email) && !activeUsers.some(u => u.email.toLowerCase() === email)) {
+      activeUsers.push({
+        id: "guest_" + email,
+        name: o.customer || "Guest Customer",
+        email: email,
+        phone: o.phone || "N/A"
+      });
     }
   });
 
-  stats.totalUsers = activeUsers.length + guestEmails.size;
+  // Fallback to local users if activeUsers is empty
+  if (activeUsers.length === 0) {
+    const localUsers = JSON.parse(localStorage.getItem("users")) || [];
+    activeUsers = localUsers.filter(u => !deletedCustomers.includes(String(u.id)) && (!u.email || !deletedCustomers.includes(u.email.toLowerCase())));
+  }
+
+  // ── Step 4: Compute Products Count ──
+  const localProducts = JSON.parse(localStorage.getItem("products")) || [];
+  stats.totalProducts = localProducts.length > 0 ? localProducts.length : (window.products?.length || 8);
+
+  // ── Step 5: Assign Metrics ──
+  stats.totalUsers = activeUsers.length;
   stats.totalOrders = combinedOrders.length;
-  
-  // Deduct Cancelled orders from Total Revenue
   stats.totalRevenue = validOrders.reduce((sum, o) => sum + (Number(o.total || o.grandTotal || 0)), 0);
 
-  // 6. Compute Reviews Count dynamically
+  // ── Step 6: Compute Reviews Count (Real storage only, zero mock) ──
+  let totalReviewsCount = 0;
   const isClearedReviews = localStorage.getItem("admin_cleared_all_reviews") === "true";
   const deletedReviewIds = JSON.parse(localStorage.getItem("deleted_reviews")) || [];
-  let totalReviewsCount = 0;
 
   if (!isClearedReviews) {
-    let reviewList = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key.startsWith("reviews_")) {
+      if (key && key.startsWith("reviews_")) {
         try {
           const items = JSON.parse(localStorage.getItem(key)) || [];
-          reviewList = reviewList.concat(items);
+          const validItems = items.filter(r => !deletedReviewIds.includes(String(r.id)) && !deletedReviewIds.includes(String(r._id)));
+          totalReviewsCount += validItems.length;
         } catch (e) {}
       }
     }
-    // Filter deleted review IDs
-    reviewList = reviewList.filter(r => !deletedReviewIds.includes(String(r.id)) && !deletedReviewIds.includes(String(r._id)));
-    totalReviewsCount = reviewList.length;
   }
   stats.totalReviews = totalReviewsCount;
 
