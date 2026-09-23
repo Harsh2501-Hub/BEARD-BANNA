@@ -508,14 +508,74 @@ async function deleteSingleOrder(id) {
   else alert(`Order "${orderRef}" deleted permanently from database.`);
 }
 
-function clearAllOrders() {
-  if (!confirm("⚠️ ARE YOU SURE? This will clear all LOCAL orders from this device only.\nOrders in Supabase database will NOT be deleted.")) return;
-  orders = orders.filter(o => o._id); // Keep only Supabase-sourced orders (those with _id)
+async function clearAllOrders() {
+  if (!confirm("⚠️ PERMANENT DATABASE RESET ⚠️\n\nAre you sure you want to permanently delete ALL orders and order items from the Supabase database and local storage?\n\nThis will completely reset order history across all devices. This action CANNOT be undone.")) return;
+
+  if (typeof showToast === "function") showToast("⏳ Deleting all orders from database...");
+
+  // ── Step 1: Ensure active Supabase Admin Session ──
+  if (typeof window.signAdminIntoSupabase === "function") {
+    try {
+      await window.signAdminIntoSupabase();
+    } catch (e) {
+      console.warn("[Admin Orders] Admin sign-in notice:", e);
+    }
+  }
+
+  let dbCleared = false;
+  let dbError = "";
+
+  // ── Step 2: Delete all order_items and orders from Supabase Database ──
+  if (window.supabaseClient) {
+    try {
+      // 1. Delete all child order_items
+      const { error: itemsErr } = await window.supabaseClient
+        .from('order_items')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000');
+
+      if (itemsErr) console.warn('[Admin Orders] Notice deleting order_items:', itemsErr.message);
+
+      // 2. Delete all orders
+      const { data, error: ordersErr } = await window.supabaseClient
+        .from('orders')
+        .delete()
+        .neq('id', '00000000-0000-0000-0000-000000000000')
+        .select();
+
+      if (ordersErr) {
+        dbError = ordersErr.message;
+        console.error('[Admin Orders] ❌ Supabase clear all orders error:', ordersErr);
+      } else {
+        dbCleared = true;
+        console.log('[Admin Orders] ✅ All orders cleared from Supabase:', data?.length || 0, 'rows deleted');
+      }
+    } catch (sbEx) {
+      dbError = sbEx.message;
+      console.error('[Admin Orders] Clear all orders exception:', sbEx);
+    }
+  }
+
+  // ── Step 3: Clear REST API backend orders if endpoint exists ──
+  try {
+    await API.delete('/orders/clear-all', { isAdmin: true });
+  } catch (err) {}
+
+  if (!dbCleared && window.supabaseClient && orders.length > 0) {
+    alert(`❌ FAILED TO CLEAR ORDERS FROM DATABASE!\n\nError: ${dbError || "Permission denied or session expired."}\nOrders were not removed from the database.`);
+    return;
+  }
+
+  // ── Step 4: Clear in-memory array & local storage ──
+  orders = [];
   localStorage.removeItem("orders");
   localStorage.removeItem("lastOrder");
+
   renderOrders();
-  if (typeof showToast === "function") showToast("🗑 Local device orders cleared.");
-  else alert("Local device orders cleared.");
+  updateOrderStatistics();
+
+  if (typeof showToast === "function") showToast("🗑️ All orders permanently deleted from database.");
+  else alert("All orders permanently deleted from database.");
 }
 
 function viewOrder(id) {
