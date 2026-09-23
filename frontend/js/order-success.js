@@ -59,15 +59,29 @@ document.getElementById("invoice-address").innerHTML = "<b>Address:</b> " + (ord
 const buyerGstEl = document.getElementById("invoice-buyer-gstin");
 if (buyerGstEl) buyerGstEl.innerHTML = order.gstin || order.customer?.gstin || "N/A";
 
-// Check GST Enabled Status
-const subtotalVal = order.subtotal || (order.grandTotal || 0);
-let gstInfo = order.gstDetails;
+// Check GST Enabled Status from Immutable Order Snapshot
+const subtotalVal = Number(order.subtotal || order.grandTotal || 0);
+let gstInfo = order.gst_details || order.gstDetails;
+let isGstActive = false;
 
-if (!gstInfo && typeof calculateGST === "function") {
-  gstInfo = calculateGST(subtotalVal, buyerState);
+if (gstInfo && typeof gstInfo === 'object') {
+  isGstActive = gstInfo.enabled === true || gstInfo.enabled === 'true';
+} else if (Number(order.tax) > 0) {
+  // Legacy order placed with GST
+  isGstActive = true;
+  const taxVal = Number(order.tax);
+  gstInfo = {
+    enabled: true,
+    totalGST: taxVal,
+    cgstAmount: Math.round((taxVal / 2) * 100) / 100,
+    sgstAmount: Math.round((taxVal / 2) * 100) / 100,
+    gstRate: 5
+  };
+} else {
+  // Order placed with GST disabled (tax free)
+  isGstActive = false;
+  gstInfo = { enabled: false, totalGST: 0, cgstAmount: 0, sgstAmount: 0, gstRate: 0 };
 }
-
-const isGstActive = gstInfo && gstInfo.enabled;
 
 // Render Exemption Banner if GST Disabled
 const bannerEl = document.getElementById("invoice-gst-exemption-banner");

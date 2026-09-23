@@ -13,15 +13,11 @@ async function loadDashboardMetrics() {
     recentUsers: []
   };
 
-  // Sync GST Toggle Status
-  const gstCheckbox = document.getElementById("gst-toggle-checkbox");
-  const gstBadge = document.getElementById("gst-status-badge");
-  const gstEnabled = typeof isGSTEnabled === "function" ? isGSTEnabled() : true;
-
-  if (gstCheckbox) gstCheckbox.checked = gstEnabled;
-  if (gstBadge) {
-    gstBadge.textContent = gstEnabled ? "ENABLED" : "DISABLED";
-    gstBadge.style.background = gstEnabled ? "#22c55e" : "#ef4444";
+  // Sync GST Toggle Status from authoritative database
+  if (typeof syncGSTSettingsFromDB === "function") {
+    syncGSTSettingsFromDB().catch(e => console.warn("[Dashboard] GST sync notice:", e));
+  } else if (typeof updateGSTUI === "function") {
+    updateGSTUI(typeof isGSTEnabled === "function" ? isGSTEnabled() : false, false, false);
   }
 
   // 1. Load Orders from localStorage

@@ -66,12 +66,18 @@ async function loadAdminOrders() {
         address: typeof o.shipping_address === 'object' && o.shipping_address
           ? `${o.shipping_address.street || ''}, ${o.shipping_address.city || ''}, ${o.shipping_address.state || ''} - ${o.shipping_address.postalCode || ''}`
           : (o.shipping_address || 'N/A'),
-        razorpayPaymentId: o.razorpay_payment_id || "",
+        subtotal: Number(o.subtotal || 0),
+        tax: Number(o.tax || 0),
+        shipping: Number(o.shipping || 0),
+        discount: Number(o.discount || 0),
+        gstDetails: o.gst_details || {},
+        gst_details: o.gst_details || {},
         items: Array.isArray(o.order_items) ? o.order_items.map(item => ({
           name: item.name || "Product",
           size: item.size || "M",
           quantity: item.quantity || 1,
-          price: item.price || 0
+          price: item.price || 0,
+          hsn: item.hsn || "6109"
         })) : []
       }));
 
@@ -418,20 +424,91 @@ function viewOrder(id) {
     `;
   });
 
+  const gstObj = order.gst_details || order.gstDetails;
+  const isGstOn = (gstObj && (gstObj.enabled === true || gstObj.enabled === 'true')) || Number(order.tax) > 0;
+  const taxAmount = Number(order.tax || 0);
+  const totalAmount = Number(order.total || order.grandTotal || 0);
+  const shippingAmount = Number(order.shipping || 0);
+  const discountAmount = Number(order.discount || 0);
+  const subtotalAmount = Number(order.subtotal || 0) || Math.max(0, totalAmount - taxAmount - shippingAmount + discountAmount);
+
+  const cgstVal = gstObj?.cgstAmount !== undefined ? gstObj.cgstAmount : (isGstOn ? Math.round((taxAmount / 2) * 100) / 100 : 0);
+  const sgstVal = gstObj?.sgstAmount !== undefined ? gstObj.sgstAmount : (isGstOn ? Math.round((taxAmount / 2) * 100) / 100 : 0);
+
   const detailsContainer = document.getElementById("order-details");
   if (detailsContainer) {
     detailsContainer.innerHTML = `
-      <h2>Order ${order.id || order.orderId}</h2><br>
-      <p><strong>Customer:</strong> ${order.customer || order.name}</p>
-      <p><strong>Email:</strong> ${order.email || "N/A"}</p>
-      <p><strong>Phone:</strong> ${order.phone || "N/A"}</p>
-      <p><strong>Payment:</strong> ${order.payment || "COD"} — <em>${order.paymentStatus || 'Pending'}</em></p>
-      ${order.razorpayPaymentId ? `<p><strong>Razorpay ID:</strong> ${order.razorpayPaymentId}</p>` : ''}
-      <p><strong>Address:</strong> ${order.address || "N/A"}</p>
-      <p><strong>Current Status:</strong> <span class="badge ${order.status ? order.status.toLowerCase() : 'processing'}">${order.status || 'Processing'}</span></p><br>
-      <h3>Ordered Items</h3>
-      <ul>${itemsHTML || '<li>No item details available</li>'}</ul>
-      <h2>Total : ₹${order.total || order.grandTotal || 0}</h2>
+      <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 15px;">
+        <h2 style="color:#fbbf24; margin:0 0 5px 0;">Order #${order.id || order.orderId}</h2>
+        <span style="color:#94a3b8; font-size:0.85rem;">Date: ${order.date || 'Today'}</span>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:15px; font-size:0.92rem;">
+        <div>
+          <p><strong>Customer:</strong> ${order.customer || order.name || 'Customer'}</p>
+          <p><strong>Email:</strong> ${order.email || "N/A"}</p>
+          <p><strong>Phone:</strong> ${order.phone || "N/A"}</p>
+        </div>
+        <div>
+          <p><strong>Payment:</strong> <span style="color:#38bdf8; font-weight:700;">${order.payment || "COD"}</span> (${order.paymentStatus || 'Pending'})</p>
+          ${order.razorpayPaymentId ? `<p><strong>Razorpay ID:</strong> <code>${order.razorpayPaymentId}</code></p>` : ''}
+          <p><strong>Status:</strong> <span class="badge ${order.status ? order.status.toLowerCase() : 'processing'}">${order.status || 'Processing'}</span></p>
+        </div>
+      </div>
+
+      <div style="margin-bottom:15px; font-size:0.92rem;">
+        <p><strong>Shipping Address:</strong><br><span style="color:#cbd5e1;">${order.address || "N/A"}</span></p>
+      </div>
+
+      <h3 style="color:#fbbf24; margin:15px 0 8px 0; font-size:1rem;">Ordered Items</h3>
+      <ul style="list-style:none; padding:0; margin:0 0 15px 0;">${itemsHTML || '<li>No item details available</li>'}</ul>
+
+      <!-- TAX & FINANCIAL BREAKDOWN -->
+      <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; padding:14px; margin-top:15px;">
+        <h4 style="margin:0 0 10px 0; color:#fbbf24; font-size:0.95rem; display:flex; justify-content:space-between; align-items:center;">
+          <span>🏛️ Tax & Financial Breakdown</span>
+          <span style="font-size:0.8rem; padding:2px 8px; border-radius:4px; ${isGstOn ? 'background:#15803d; color:#f0fdf4;' : 'background:#334155; color:#94a3b8;'}">
+            ${isGstOn ? 'GST Applied (5%)' : '0% Tax-Free (Exempt)'}
+          </span>
+        </h4>
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#cbd5e1;">
+          <span>Subtotal (Taxable):</span>
+          <span>₹${subtotalAmount}</span>
+        </div>
+        ${isGstOn ? `
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#cbd5e1;">
+            <span>CGST (2.5%) [HSN 6109]:</span>
+            <span style="color:#fbbf24;">+₹${cgstVal}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#cbd5e1;">
+            <span>SGST (2.5%) [HSN 6109]:</span>
+            <span style="color:#fbbf24;">+₹${sgstVal}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#fef08a; font-weight:600;">
+            <span>Total GST Tax:</span>
+            <span>+₹${taxAmount}</span>
+          </div>
+        ` : `
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#4ade80;">
+            <span>GST Charged:</span>
+            <span>₹0 (Tax Free)</span>
+          </div>
+        `}
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#cbd5e1;">
+          <span>Shipping:</span>
+          <span>${shippingAmount === 0 ? 'FREE' : '₹' + shippingAmount}</span>
+        </div>
+        ${discountAmount > 0 ? `
+          <div style="display:flex; justify-content:space-between; margin-bottom:5px; font-size:0.88rem; color:#4ade80;">
+            <span>Discount Applied:</span>
+            <span>-₹${discountAmount}</span>
+          </div>
+        ` : ''}
+        <div style="display:flex; justify-content:space-between; margin-top:10px; padding-top:8px; border-top:1px solid #334155; font-size:1.1rem; font-weight:800; color:#fbbf24;">
+          <span>Grand Total:</span>
+          <span>₹${totalAmount}</span>
+        </div>
+      </div>
     `;
   }
   const modal = document.getElementById("order-modal");

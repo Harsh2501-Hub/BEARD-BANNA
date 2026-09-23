@@ -103,7 +103,7 @@ function calculateTotals() {
   }
 
   const gstAmount = (currentGST && currentGST.enabled) ? currentGST.totalGST : 0;
-  grandTotal = Math.max(0, subtotal + gstAmount + shipping - appliedDiscount);
+  grandTotal = Math.max(0, Math.round((subtotal + gstAmount + shipping - appliedDiscount) * 100) / 100);
 
   if (subtotalElement) subtotalElement.innerHTML = "₹" + subtotal;
   if (shippingElement) shippingElement.innerHTML = shipping === 0 ? "FREE" : "₹99";
@@ -112,15 +112,29 @@ function calculateTotals() {
   if (gstContainer) {
     if (currentGST && currentGST.enabled) {
       gstContainer.innerHTML = `
-        <p style="color:#666; font-size:0.9rem;">CGST (2.5%): <span>+₹${currentGST.cgstAmount}</span></p>
-        <p style="color:#666; font-size:0.9rem;">SGST (2.5%): <span>+₹${currentGST.sgstAmount}</span></p>
+        <div style="background:rgba(212,175,55,0.08); padding:8px 12px; border-radius:6px; margin:8px 0; border:1px solid rgba(212,175,55,0.2);">
+          <div style="display:flex; justify-content:space-between; color:#cbd5e1; font-size:0.88rem; margin-bottom:4px;">
+            <span>CGST (2.5%) [HSN 6109]:</span>
+            <span style="color:#fbbf24; font-weight:600;">+₹${currentGST.cgstAmount}</span>
+          </div>
+          <div style="display:flex; justify-content:space-between; color:#cbd5e1; font-size:0.88rem;">
+            <span>SGST (2.5%) [HSN 6109]:</span>
+            <span style="color:#fbbf24; font-weight:600;">+₹${currentGST.sgstAmount}</span>
+          </div>
+        </div>
       `;
     } else {
-      gstContainer.innerHTML = "";
+      gstContainer.innerHTML = `
+        <div style="background:rgba(34,197,94,0.08); padding:6px 12px; border-radius:6px; margin:8px 0; border:1px solid rgba(34,197,94,0.2); display:flex; justify-content:space-between; align-items:center;">
+          <span style="color:#4ade80; font-size:0.85rem; font-weight:600;">✨ Tax-Free Shopping:</span>
+          <span style="color:#4ade80; font-size:0.85rem; font-weight:700;">₹0 GST</span>
+        </div>
+      `;
     }
   }
 }
 
+window.calculateTotals = calculateTotals;
 const stateInputEl = document.getElementById("state");
 if (stateInputEl) stateInputEl.addEventListener("input", calculateTotals);
 
@@ -278,20 +292,25 @@ function closeModal() {
   if (modal) modal.style.display = "none";
 }
 
-function confirmOrder() {
+async function confirmOrder() {
   if (_orderInProgress) return;
 
   const btn = document.querySelector(".confirm-btn");
   if (btn && btn.disabled) return;
 
   _orderInProgress = true;
-  if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Processing Order...`; }
+  if (btn) { btn.disabled = true; btn.innerHTML = `⏳ Verifying Order & Tax...`; }
 
-  const selectedPayment = (orderData.payment || "COD").toUpperCase();
+  // Authoritative check: Refresh GST setting directly from database (Do not trust client-only state)
+  if (typeof syncGSTSettingsFromDB === "function") {
+    try { await syncGSTSettingsFromDB(); } catch (e) {}
+  }
   calculateTotals();
 
+  const selectedPayment = (orderData.payment || "COD").toUpperCase();
+
   if (selectedPayment === "COD") {
-    finalizeOrder({ paymentMethod: "COD", paymentStatus: "Pending" });
+    await finalizeOrder({ paymentMethod: "COD", paymentStatus: "Pending" });
     return;
   }
 
@@ -418,12 +437,45 @@ async function finalizeOrder(paymentMeta = {}) {
     country: "India"
   };
 
+  // Force authoritative GST sync before persisting order
+  if (typeof syncGSTSettingsFromDB === "function") {
+    try { await syncGSTSettingsFromDB(); } catch (e) {}
+  }
   calculateTotals();
 
-  // Snapshot GST at order-placement time
-  const gstSnapshot = currentGST
-    ? { ...currentGST }
-    : { enabled: false, totalGST: 0, cgstAmount: 0, sgstAmount: 0, gstRate: 0 };
+  // Immutable GST snapshot captured at time of purchase
+  const isGstActive = !!(currentGST && currentGST.enabled);
+  const gstSnapshot = isGstActive ? {
+    enabled: true,
+    gstRate: currentGST.gstRate || 5,
+    cgstRate: currentGST.cgstRate || 2.5,
+    cgstAmount: currentGST.cgstAmount || 0,
+    sgstRate: currentGST.sgstRate || 2.5,
+    sgstAmount: currentGST.sgstAmount || 0,
+    igstRate: 0,
+    igstAmount: 0,
+    totalGST: currentGST.totalGST || 0,
+    taxableAmount: subtotal,
+    hsn: "6109",
+    sellerGSTIN: "08AAAFB1234A1Z1",
+    sellerState: "Rajasthan",
+    buyerState: orderData.state || "Rajasthan"
+  } : {
+    enabled: false,
+    gstRate: 0,
+    cgstRate: 0,
+    cgstAmount: 0,
+    sgstRate: 0,
+    sgstAmount: 0,
+    igstRate: 0,
+    igstAmount: 0,
+    totalGST: 0,
+    taxableAmount: subtotal,
+    hsn: "6109",
+    sellerGSTIN: "08AAAFB1234A1Z1",
+    sellerState: "Rajasthan",
+    buyerState: orderData.state || "Rajasthan"
+  };
 
   const orderId = "BB" + Date.now().toString().slice(-8);
 
@@ -454,6 +506,7 @@ async function finalizeOrder(paymentMeta = {}) {
     shipping: shipping,
     tax: gstSnapshot.enabled ? gstSnapshot.totalGST : 0,
     gstDetails: gstSnapshot,
+    gst_details: gstSnapshot,
     date: new Date().toLocaleDateString("en-IN"),
     orderDate: new Date().toISOString(),
     items: orderItems.map(i => ({

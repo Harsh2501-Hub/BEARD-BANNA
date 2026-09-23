@@ -238,3 +238,4 @@ async function logoutAdmin() {
 }
 
 window.logoutAdmin = logoutAdmin;
+window.signAdminIntoSupabase = signAdminIntoSupabase;

@@ -43,6 +43,7 @@ router.post('/', async (req, res) => {
       items,
       subtotal: subtotal || total,
       tax: tax || 0,
+      gstDetails: req.body.gstDetails || req.body.gst_details || {},
       shipping: shipping || 0,
       total,
       paymentMethod: paymentMethod || 'COD',

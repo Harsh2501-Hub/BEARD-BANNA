@@ -61,6 +61,10 @@ const orderSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
+  gstDetails: {
+    type: Object,
+    default: {}
+  },
   shipping: {
     type: Number,
     default: 0

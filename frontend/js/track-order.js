@@ -111,6 +111,9 @@ async function loadOrderData() {
           subtotal: s.subtotal,
           shipping: s.shipping,
           tax: s.tax,
+          discount: s.discount || 0,
+          gst_details: s.gst_details || {},
+          gstDetails: s.gst_details || {},
           customer: {
             name: s.customer_name || activeUser?.name || 'Customer',
             email: s.customer_email || userEmail,
