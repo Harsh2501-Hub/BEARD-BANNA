@@ -2,28 +2,83 @@
 // ADMIN ANALYTICS - REAL-TIME LIVE DATA SYNC
 // ===============================
 
-async function loadAnalytics() {
-  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  let orders = [...localOrders];
+let currentOrders = [];
 
+async function loadAnalytics() {
+  let orders = [];
+  let dbLoaded = false;
+
+  // ── SOURCE 1: Supabase (PRIMARY — live database) ──
   try {
-    const res = await API.get('/orders', { isAdmin: true });
-    if (res.success && Array.isArray(res.data?.orders)) {
-      res.data.orders.forEach(so => {
-        if (!orders.some(lo => lo.id === (so.orderNumber || so._id))) {
+    if (window.supabaseClient) {
+      if (typeof signAdminIntoSupabase === 'function') {
+        await signAdminIntoSupabase();
+      }
+
+      const { data: sbOrders, error: sbErr } = await window.supabaseClient
+        .from('orders')
+        .select('*, order_items(*)')
+        .order('created_at', { ascending: false });
+
+      if (sbErr) {
+        console.warn("[Admin Analytics] Supabase query notice:", sbErr.message);
+      } else if (Array.isArray(sbOrders)) {
+        dbLoaded = true;
+        orders = sbOrders.map(o => ({
+          id: o.order_number || o.id,
+          customer: o.customer_name || "Customer",
+          total: Number(o.total || 0),
+          grandTotal: Number(o.total || 0),
+          status: o.order_status ? o.order_status.charAt(0).toUpperCase() + o.order_status.slice(1) : "Pending",
+          date: new Date(o.created_at).toLocaleDateString("en-IN"),
+          items: Array.isArray(o.order_items) ? o.order_items.map(i => ({
+            name: i.name || "Product",
+            quantity: i.quantity || 1,
+            price: i.price || 0,
+            category: i.category || 'Apparel'
+          })) : []
+        }));
+      }
+    }
+  } catch (sbEx) {
+    console.warn("[Admin Analytics] Supabase fetch exception:", sbEx.message);
+  }
+
+  // ── SOURCE 2: REST API backend ──
+  if (!dbLoaded) {
+    try {
+      const res = await API.get('/orders', { isAdmin: true });
+      if (res.success && Array.isArray(res.data?.orders)) {
+        dbLoaded = true;
+        res.data.orders.forEach(so => {
           orders.push({
             id: so.orderNumber || so._id,
+            customer: so.customerName || "Customer",
             total: so.totalPrice || 0,
+            grandTotal: so.totalPrice || 0,
             status: so.orderStatus || "Pending",
             date: new Date(so.createdAt).toLocaleDateString("en-IN"),
             items: so.orderItems || []
           });
-        }
-      });
+        });
+      }
+    } catch (err) {
+      console.warn("Using local analytics data");
     }
-  } catch (err) {
-    console.warn("Using local analytics data");
   }
+
+  // ── SOURCE 3: localStorage (ONLY as emergency offline fallback) ──
+  if (!dbLoaded) {
+    const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
+    orders = [...localOrders];
+  } else {
+    try {
+      localStorage.removeItem("orders");
+      localStorage.removeItem("lastOrder");
+    } catch (e) {}
+  }
+
+  currentOrders = orders;
 
   // Filter out cancelled orders for real analytics metrics
   const activeOrders = orders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
@@ -142,8 +197,7 @@ function renderGrowthInsights(activeOrders) {
 }
 
 function exportAnalyticsReport() {
-  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  const activeOrders = localOrders.filter(o => (o.status || "").toLowerCase() !== "cancelled");
+  const activeOrders = (currentOrders || []).filter(o => (o.status || "").toLowerCase() !== "cancelled");
 
   if (activeOrders.length === 0) {
     alert("No active order data to export.");

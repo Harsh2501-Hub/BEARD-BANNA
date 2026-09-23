@@ -22,6 +22,8 @@ async function loadAdminCustomers() {
   let dbProfiles = [];
   let dbOrders = [];
 
+  let dbOrdersLoaded = false;
+
   // ── Step 2: Fetch Profiles & Orders from Supabase ──
   if (window.supabaseClient) {
     try {
@@ -31,7 +33,10 @@ async function loadAdminCustomers() {
       ]);
 
       if (Array.isArray(profilesRes.data)) dbProfiles = profilesRes.data;
-      if (Array.isArray(ordersRes.data)) dbOrders = ordersRes.data;
+      if (Array.isArray(ordersRes.data)) {
+        dbOrders = ordersRes.data;
+        dbOrdersLoaded = true;
+      }
     } catch (sbErr) {
       console.warn("[Admin Customers] Supabase query notice:", sbErr);
     }
@@ -42,8 +47,15 @@ async function loadAdminCustomers() {
   const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
   const deletedCustomers = JSON.parse(localStorage.getItem("deleted_customers")) || [];
 
+  if (dbOrdersLoaded) {
+    try {
+      localStorage.removeItem("orders");
+      localStorage.removeItem("lastOrder");
+    } catch (e) {}
+  }
+
   // Merge orders: exclude Cancelled orders from spending
-  const allOrders = (dbOrders.length > 0 ? dbOrders : localOrders).map(o => ({
+  const allOrders = (dbOrdersLoaded ? dbOrders : localOrders).map(o => ({
     id: o.order_number || o.id,
     customer: o.customer_name || o.customer || "Customer",
     email: (o.customer_email || o.email || "").toLowerCase(),

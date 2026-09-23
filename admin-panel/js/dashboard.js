@@ -68,6 +68,11 @@ async function loadDashboardMetrics() {
   if (!dbOrdersLoaded) {
     const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
     combinedOrders = [...localOrders];
+  } else {
+    try {
+      localStorage.removeItem("orders");
+      localStorage.removeItem("lastOrder");
+    } catch (e) {}
   }
 
   // ── Step 2: Load Inquiries from Supabase (PRIMARY) ──

@@ -20,6 +20,7 @@ async function loadAdminOrders() {
   }
 
   let combinedOrders = [];
+  let dbOrdersLoaded = false;
 
   // ── SOURCE 1: Supabase (PRIMARY — requires admin Supabase session) ──────────────
   try {
@@ -50,6 +51,7 @@ async function loadAdminOrders() {
         console.warn('[Admin Orders] Auth issue — ensure admin is signed into Supabase.');
       }
     } else if (Array.isArray(sbOrders)) {
+      dbOrdersLoaded = true;
       const mappedSb = sbOrders.map(o => ({
         id: o.order_number || o.id,
         _id: o.id,
@@ -131,13 +133,21 @@ async function loadAdminOrders() {
     // REST API offline — continue with Supabase data
   }
 
-  // ── SOURCE 3: localStorage (local device orders only — not shared across devices) ──
-  const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  localOrders.forEach(lo => {
-    if (!combinedOrders.some(co => String(co.id) === String(lo.id) || String(co.orderId) === String(lo.orderId))) {
-      combinedOrders.push(lo);
-    }
-  });
+  // ── SOURCE 3: localStorage (ONLY as offline emergency fallback when DB is unreachable) ──
+  if (!dbOrdersLoaded) {
+    const localOrders = JSON.parse(localStorage.getItem("orders")) || [];
+    localOrders.forEach(lo => {
+      if (!combinedOrders.some(co => String(co.id) === String(lo.id) || String(co.orderId) === String(lo.orderId))) {
+        combinedOrders.push(lo);
+      }
+    });
+  } else {
+    // Database is authoritative and live: clean up stale ghost orders on this device
+    try {
+      localStorage.removeItem("orders");
+      localStorage.removeItem("lastOrder");
+    } catch (e) {}
+  }
 
   // Sort combined orders by date (newest first)
   combinedOrders.sort((a, b) => {

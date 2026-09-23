@@ -10,30 +10,30 @@
 
 <body class="admin-dashboard">
     <div class="admin-container">
-        <!-- Sidebar -->
+                <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
-                <h2>?? BEARD BANNA</h2>
+                <h2>👑 BEARD BANNA</h2>
                 <span>Admin Panel</span>
             </div>
             <nav>
-                <a href="dashboard.html">?? Dashboard</a>
-                <a href="products.html" class="active">?? Products</a>
-                <a href="categories.html">?? Categories</a>
-                <a href="orders.html">?? Orders</a>
-                <a href="customers.html">?? Customers</a>
-                <a href="inquiries.html">?? Inquiries</a>
-                <a href="reviews.html">?? Reviews</a>
-                <a href="analytics.html">?? Analytics</a>
-                <a href="settings.html">? Settings</a>
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="products.html" class="active">📦 Products</a>
+                <a href="categories.html">📂 Categories</a>
+                <a href="orders.html">🛒 Orders</a>
+                <a href="customers.html">👥 Customers</a>
+                <a href="inquiries.html">📩 Inquiries</a>
+                <a href="reviews.html">💬 Reviews</a>
+                <a href="analytics.html">📈 Analytics</a>
+                <a href="settings.html">⚙ Settings</a>
             </nav>
-            <button id="logout-btn">?? Logout</button>
+            <button id="logout-btn">🚪 Logout</button>
         </aside>
 
         <!-- Main Content -->
         <main class="dashboard-content">
             <div class="products-header">
-                <h1>?? Product Catalog Management</h1>
+                <h1>📦 Product Catalog Management</h1>
                 <span id="product-count">0 Products</span>
             </div>
 
@@ -59,12 +59,12 @@
 
                 <!-- Add/Edit Product Form -->
                 <aside class="product-form">
-                    <h2 id="form-title">? Add Product</h2>
+                    <h2 id="form-title">➕ Add Product</h2>
                     <form id="product-form">
                         <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Product Name:</label>
                         <input type="text" id="product-name" placeholder="e.g. Royal Warrior Tee" required>
 
-                        <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Price (?):</label>
+                        <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Price (₹):</label>
                         <input type="number" id="product-price" placeholder="e.g. 999" required>
 
                         <label style="display:block; font-size:0.85rem; margin-top:5px; color:#94a3b8; font-weight:600;">Category:</label>
@@ -78,7 +78,7 @@
 
                         <!-- PER-SIZE STOCK INVENTORY INPUTS -->
                         <label style="display:block; font-size:0.88rem; margin-top:14px; color:#fbbf24; font-weight:700;">
-                            ?? Stock Inventory By Size:
+                            📏 Stock Inventory By Size:
                         </label>
                         <p style="font-size:0.78rem; color:#94a3b8; margin:2px 0 8px 0;">Enter available quantity for each size.</p>
 
@@ -108,7 +108,7 @@
                         <!-- 3 MULTI-ANGLE IMAGE INPUTS -->
                         <div style="margin-top:16px; background:rgba(30, 41, 59, 0.6); padding:12px; border-radius:8px; border:1px solid #334155;">
                             <label style="display:block; font-size:0.88rem; color:#38bdf8; font-weight:700; margin-bottom:8px;">
-                                ?? 3 Product View Images (Front, Back & Side):
+                                📸 3 Product View Images (Front, Back & Side):
                             </label>
 
                             <!-- Front Image -->
@@ -136,25 +136,25 @@
                         <label style="display:block; font-size:0.85rem; margin-top:12px; color:#94a3b8; font-weight:600;">Product Description:</label>
                         <textarea id="product-description" rows="3" placeholder="Product description..."></textarea>
 
-                        <button type="submit" style="margin-top:15px; width:100%;">?? Save Product</button>
+                        <button type="submit" style="margin-top:15px; width:100%;">💾 Save Product</button>
                     </form>
                 </aside>
 
                 <!-- Live Preview Card with 3-Angle Toggle -->
                 <aside class="product-preview">
-                    <h2>?? Live Multi-Angle Preview</h2>
+                    <h2>👀 Live Multi-Angle Preview</h2>
                     <div class="preview-card">
                         <img id="preview-image" src="images/Product 1.jpeg" alt="Preview" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
                         
                         <!-- Preview Angle Selector Tabs -->
                         <div style="display:flex; justify-content:center; gap:6px; margin:10px 0;">
-                            <button type="button" class="preview-angle-btn active" onclick="switchPreviewAngle('front', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; font-weight:700; cursor:pointer;">?? Front</button>
-                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('back', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">?? Back</button>
-                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('side', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">?? Side</button>
+                            <button type="button" class="preview-angle-btn active" onclick="switchPreviewAngle('front', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #38bdf8; background:#38bdf8; color:#0f172a; font-weight:700; cursor:pointer;">📸 Front</button>
+                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('back', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">🔄 Back</button>
+                            <button type="button" class="preview-angle-btn" onclick="switchPreviewAngle('side', this)" style="padding:4px 8px; font-size:0.75rem; border-radius:4px; border:1px solid #334155; background:#1e293b; color:#cbd5e1; font-weight:600; cursor:pointer;">📐 Side</button>
                         </div>
 
                         <h3 id="preview-name">Product Name</h3>
-                        <h4 id="preview-price">?0</h4>
+                        <h4 id="preview-price">₹0</h4>
                         <p id="preview-category">Category</p>
                         <p id="preview-description">Product description will appear here.</p>
                     </div>

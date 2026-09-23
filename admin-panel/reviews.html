@@ -10,24 +10,24 @@
 
 <body class="admin-dashboard">
     <div class="admin-container">
-        <!-- Sidebar -->
+                <!-- Sidebar -->
         <aside class="sidebar">
             <div class="logo">
-                <h2>?? BEARD BANNA</h2>
+                <h2>👑 BEARD BANNA</h2>
                 <span>Admin Panel</span>
             </div>
             <nav>
-                <a href="dashboard.html">?? Dashboard</a>
-                <a href="products.html">?? Products</a>
-                <a href="categories.html">?? Categories</a>
-                <a href="orders.html">?? Orders</a>
-                <a href="customers.html">?? Customers</a>
-                <a href="inquiries.html">?? Inquiries</a>
-                <a href="reviews.html" class="active">?? Reviews <span id="pending-reviews-badge" style="background:#ef4444; color:white; padding:2px 6px; border-radius:10px; font-size:0.75rem; display:none;">0</span></a>
-                <a href="analytics.html">?? Analytics</a>
-                <a href="settings.html">? Settings</a>
+                <a href="dashboard.html">📊 Dashboard</a>
+                <a href="products.html">📦 Products</a>
+                <a href="categories.html">📂 Categories</a>
+                <a href="orders.html">🛒 Orders</a>
+                <a href="customers.html">👥 Customers</a>
+                <a href="inquiries.html">📩 Inquiries</a>
+                <a href="reviews.html" class="active">💬 Reviews</a>
+                <a href="analytics.html">📈 Analytics</a>
+                <a href="settings.html">⚙ Settings</a>
             </nav>
-            <button id="logout-btn">?? Logout</button>
+            <button id="logout-btn">🚪 Logout</button>
         </aside>
 
         <!-- Main Content -->
@@ -41,7 +41,7 @@
                     </div>
                     <div class="stat-card">
                         <h3>Average Rating</h3>
-                        <h2 id="analytics-avg-rating">? 0.0</h2>
+                        <h2 id="analytics-avg-rating">⭐ 0.0</h2>
                     </div>
                     <div class="stat-card">
                         <h3>Approved</h3>
@@ -63,37 +63,37 @@
 
                 <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px;">
                     <div>
-                        <h1>?? Product Reviews Moderation</h1>
+                        <h1>⭐ Product Reviews Moderation</h1>
                         <p>Approve, reject, inspect customer reviews, and monitor star ratings across all products.</p>
                     </div>
                     <button onclick="clearAllReviewsAdmin()" style="background:#dc2626; color:white; padding:10px 18px; border:none; border-radius:8px; font-weight:700; cursor:pointer; font-size:0.92rem; display:flex; align-items:center; gap:6px;">
-                        ??? Clear All Reviews
+                        🗑️ Clear All Reviews
                     </button>
                 </div>
             </div>
 
             <!-- Toolbar Filters & Search -->
             <div class="orders-toolbar" style="margin-top:20px; display:flex; gap:12px; flex-wrap:wrap;">
-                <input type="text" id="review-search" placeholder="?? Search Customer, Product, or Review Text..." style="flex:1; min-width:260px;">
+                <input type="text" id="review-search" placeholder="🔍 Search Customer, Product, or Review Text..." style="flex:1; min-width:260px;">
 
                 <select id="status-filter">
-                    <option value="all">?? All Statuses</option>
-                    <option value="approved">? Approved</option>
-                    <option value="pending">?? Pending</option>
-                    <option value="rejected">?? Rejected</option>
+                    <option value="all">📋 All Statuses</option>
+                    <option value="approved">✅ Approved</option>
+                    <option value="pending">🟡 Pending</option>
+                    <option value="rejected">🔴 Rejected</option>
                 </select>
 
                 <select id="rating-filter">
-                    <option value="all">? All Ratings</option>
-                    <option value="5">5 Stars ?????</option>
-                    <option value="4">4 Stars ????</option>
-                    <option value="3">3 Stars ???</option>
-                    <option value="2">2 Stars ??</option>
-                    <option value="1">1 Star ?</option>
+                    <option value="all">⭐ All Ratings</option>
+                    <option value="5">5 Stars ★★★★★</option>
+                    <option value="4">4 Stars ★★★★</option>
+                    <option value="3">3 Stars ★★★</option>
+                    <option value="2">2 Stars ★★</option>
+                    <option value="1">1 Star ★</option>
                 </select>
 
                 <select id="verified-filter">
-                    <option value="all">? All Purchases</option>
+                    <option value="all">✔ All Purchases</option>
                     <option value="true">Verified Purchases Only</option>
                     <option value="false">Standard Reviews</option>
                 </select>
