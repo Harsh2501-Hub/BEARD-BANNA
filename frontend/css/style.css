@@ -1,3 +1,17 @@
+/* ==========================================================================
+   Typographic Scale System (< 10 distinct sizes)
+   ========================================================================== */
+:root {
+    --text-xs:   0.75rem;    /* 12px - Badges, legal, helper notes */
+    --text-sm:   0.875rem;   /* 14px - Subtitles, captions, meta */
+    --text-base: 1rem;       /* 16px - Body copy, standard nav links, form inputs */
+    --text-md:   1.125rem;   /* 18px - Lead text, buttons, emphasized elements */
+    --text-lg:   1.25rem;    /* 20px - Card titles, h4 */
+    --text-xl:   1.5rem;     /* 24px - Section subtitles, h3 */
+    --text-2xl:  2rem;       /* 32px - Section headings, h2 */
+    --text-3xl:  clamp(2.1rem, 5vw, 3.5rem); /* 34px-56px - Responsive hero display */
+}
+
 html {
     scroll-behavior: smooth;
 }
@@ -100,10 +114,16 @@ header {
 
 header p {
     margin-top: 25px;
-    font-size: 1.5rem;
-    letter-spacing: 5px;
+    font-size: var(--text-xl, 1.5rem);
+    letter-spacing: 4px;
     font-weight: bold;
     text-shadow: 2px 2px 8px black;
+    text-transform: uppercase;
+}
+
+.header-tagline .sep {
+    color: #D4AF37;
+    margin: 0 4px;
 }
 
 /* NAVBAR */
@@ -3548,19 +3568,19 @@ img:hover {
 
 .hero-main-title {
     font-family: 'Cinzel', 'Playfair Display', serif !important;
-    font-size: 3.5rem !important;
+    font-size: var(--text-3xl, 3.5rem) !important;
     font-weight: 900 !important;
     color: #FDF6E3 !important;
-    letter-spacing: 2px !important;
-    line-height: 1.2 !important;
+    letter-spacing: 1.5px !important;
+    line-height: 1.25 !important;
     margin-bottom: 12px !important;
     text-shadow: 0 0 25px rgba(212, 175, 55, 0.6), 3px 3px 12px rgba(0, 0, 0, 0.95) !important;
-    text-transform: uppercase !important;
+    text-transform: none !important;
 }
 
 .hero-subtitle {
     font-family: 'Playfair Display', serif !important;
-    font-size: 1.6rem !important;
+    font-size: var(--text-xl, 1.6rem) !important;
     color: #E6C875 !important;
     font-weight: 600 !important;
     letter-spacing: 3px !important;
@@ -3575,10 +3595,10 @@ img:hover {
     padding: 18px 48px !important;
     margin-top: 18px !important;
     font-family: 'Cinzel', serif !important;
-    font-size: 1.15rem !important;
+    font-size: var(--text-md, 1.15rem) !important;
     font-weight: 900 !important;
-    letter-spacing: 3px !important;
-    text-transform: uppercase !important;
+    letter-spacing: 2px !important;
+    text-transform: none !important;
     color: #3D0A10 !important;
     background: linear-gradient(135deg, #F5D77F 0%, #D4AF37 50%, #B8860B 100%) !important;
     border: 2px solid #FFF8DC !important;
@@ -3589,6 +3609,12 @@ img:hover {
     position: relative;
     overflow: hidden;
     cursor: pointer;
+}
+
+.btn-sparkle {
+    display: inline-block;
+    margin: 0 4px;
+    font-size: 0.95em;
 }
 
 .collection-btn:hover,
@@ -3652,14 +3678,14 @@ img:hover {
 
 @media (max-width: 768px) {
     .hero-main-title {
-        font-size: 2.1rem !important;
+        font-size: clamp(1.8rem, 7vw, 2.3rem) !important;
     }
     .hero-subtitle {
-        font-size: 1.2rem !important;
+        font-size: var(--text-sm, 1.1rem) !important;
     }
     .collection-btn {
         padding: 14px 32px !important;
-        font-size: 0.98rem !important;
+        font-size: var(--text-base, 1rem) !important;
     }
     .hero-features-bar {
         gap: 12px;
