@@ -1,0 +1,84 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+    
+    <!-- Homepage -->
+    <url>
+        <loc>https://beard-banna.vercel.app/</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+
+    <!-- Collection Catalog -->
+    <url>
+        <loc>https://beard-banna.vercel.app/collection</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>0.9</priority>
+    </url>
+
+    <!-- Product 1: Royal Warrior Embroidered Tee -->
+    <url>
+        <loc>https://beard-banna.vercel.app/product?id=1</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <image:image>
+            <image:loc>https://beard-banna.vercel.app/images/Product%201.jpeg</image:loc>
+            <image:title>Royal Warrior Embroidered Tee</image:title>
+            <image:caption>Royal warrior tee with gold Rajputana scriptures and premium 100% cotton fabric.</image:caption>
+        </image:image>
+    </url>
+
+    <!-- Product 2: Imperial Heritage Polo Shirt -->
+    <url>
+        <loc>https://beard-banna.vercel.app/product?id=2</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <image:image>
+            <image:loc>https://beard-banna.vercel.app/images/Product%202.jpeg</image:loc>
+            <image:title>Imperial Heritage Polo Shirt</image:title>
+            <image:caption>Classic polo shirt with royal crest logo and tailored fit.</image:caption>
+        </image:image>
+    </url>
+
+    <!-- Product 3: Rajputana Valor Heavyweight Hoodie -->
+    <url>
+        <loc>https://beard-banna.vercel.app/product?id=3</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>weekly</changefreq>
+        <priority>0.8</priority>
+        <image:image>
+            <image:loc>https://beard-banna.vercel.app/images/Product%203.jpeg</image:loc>
+            <image:title>Rajputana Valor Heavyweight Hoodie</image:title>
+            <image:caption>Premium cotton hoodie crafted for brave hearts.</image:caption>
+        </image:image>
+    </url>
+
+    <!-- Track Order (Public Lookup Service) -->
+    <url>
+        <loc>https://beard-banna.vercel.app/track-order</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.6</priority>
+    </url>
+
+    <!-- Creator & Developer Profile -->
+    <url>
+        <loc>https://beard-banna.vercel.app/creator</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.5</priority>
+    </url>
+
+    <!-- Privacy Policy (Public Compliance Document) -->
+    <url>
+        <loc>https://beard-banna.vercel.app/privacy</loc>
+        <lastmod>2026-11-14</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.4</priority>
+    </url>
+
+</urlset>

@@ -157,17 +157,17 @@ function renderAdminReviewsTable(reviews) {
 
     html += `
       <tr>
-        <td><small>#${id.slice(-6)}</small></td>
-        <td><b>${customerName}</b><br><small style="color:#94a3b8;">${r.user?.email || ''}</small></td>
-        <td><b>${productName}</b></td>
-        <td><strong style="color:#f59e0b;">${r.rating} ★</strong></td>
+        <td><small>#${escapeHtml(id.slice(-6))}</small></td>
+        <td><b>${escapeHtml(customerName)}</b><br><small style="color:#94a3b8;">${escapeHtml(r.user?.email || '')}</small></td>
+        <td><b>${escapeHtml(productName)}</b></td>
+        <td><strong style="color:#f59e0b;">${Number(r.rating || 5)} ★</strong></td>
         <td>
-          <div style="font-weight:700; color:#520F16;">${r.title || ''}</div>
-          <small style="color:#64748b;">${r.comment ? (r.comment.length > 50 ? r.comment.slice(0, 50) + '...' : r.comment) : ''}</small>
+          <div style="font-weight:700; color:#520F16;">${escapeHtml(r.title || '')}</div>
+          <small style="color:#64748b;">${escapeHtml(r.comment ? (r.comment.length > 50 ? r.comment.slice(0, 50) + '...' : r.comment) : '')}</small>
         </td>
         <td>${r.isVerifiedPurchase ? `<span style="background:#166534; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">✔ Verified</span>` : `<span style="color:#94a3b8; font-size:0.8rem;">Standard</span>`}</td>
         <td>${statusBadge}</td>
-        <td><small>${dateStr}</small></td>
+        <td><small>${escapeHtml(dateStr)}</small></td>
         <td>
           <div style="display:flex; gap:6px; flex-wrap:wrap;">
             ${status !== 'approved' ? `<button onclick="updateReviewStatusAction('${id}', 'approved')" style="background:#22c55e; color:white; border:none; padding:4px 8px; border-radius:4px; font-weight:700; cursor:pointer;" title="Approve Review">✅ Approve</button>` : ''}
@@ -286,18 +286,18 @@ function viewReviewDetails(id) {
   const modalBody = document.getElementById("modal-review-details");
   if (modalBody) {
     modalBody.innerHTML = `
-      <h2 style="color:#520F16; margin-top:0;">Review Details (#${id.slice(-6)})</h2>
+      <h2 style="color:#520F16; margin-top:0;">Review Details (#${escapeHtml(id.slice(-6))})</h2>
       <hr style="margin:10px 0;">
-      <p><b>Customer:</b> ${review.user?.name || 'Customer'} (${review.user?.email || 'N/A'})</p>
-      <p><b>Product:</b> ${review.product?.title || 'Product'}</p>
-      <p><b>Rating:</b> <strong style="color:#f59e0b;">${review.rating} ★★★★★</strong></p>
+      <p><b>Customer:</b> ${escapeHtml(review.user?.name || 'Customer')} (${escapeHtml(review.user?.email || 'N/A')})</p>
+      <p><b>Product:</b> ${escapeHtml(review.product?.title || 'Product')}</p>
+      <p><b>Rating:</b> <strong style="color:#f59e0b;">${Number(review.rating || 5)} ★★★★★</strong></p>
       <p><b>Verification:</b> ${review.isVerifiedPurchase ? '✔ Verified Purchase' : 'Standard Review'}</p>
-      <p><b>Status:</b> ${review.status || 'approved'}</p>
-      <p><b>Date:</b> ${new Date(review.createdAt || Date.now()).toLocaleString()}</p>
+      <p><b>Status:</b> ${escapeHtml(review.status || 'approved')}</p>
+      <p><b>Date:</b> ${escapeHtml(new Date(review.createdAt || Date.now()).toLocaleString())}</p>
       <br>
       <div style="background:#fafafa; border:1px solid #ddd; padding:12px; border-radius:8px;">
-        <h3 style="margin-top:0; color:#520F16;">${review.title || 'Review Headline'}</h3>
-        <p style="margin:0; line-height:1.5;">${review.comment || ''}</p>
+        <h3 style="margin-top:0; color:#520F16;">${escapeHtml(review.title || 'Review Headline')}</h3>
+        <p style="margin:0; line-height:1.5;">${escapeHtml(review.comment || '')}</p>
         ${imagesHTML}
       </div>
     `;

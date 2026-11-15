@@ -87,26 +87,14 @@ async function getAuthoritativeAdminToken() {
     console.warn("[GST Engine] Session check notice:", e.message);
   }
 
-  // Session expired or missing — re-authenticate as admin
+  // Session expired or missing — attempt token refresh via Supabase Auth
   try {
-    if (typeof window.signAdminIntoSupabase === "function") {
-      const ok = await window.signAdminIntoSupabase();
-      if (ok) {
-        const { data: { session } } = await window.supabaseClient.auth.getSession();
-        if (session?.access_token) return session.access_token;
-      }
-    } else {
-      // Direct sign-in using admin credentials
-      const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-        email: 'beardbanna07773@gmail.com',
-        password: 'Banna@7773'
-      });
-      if (!error && data?.session?.access_token) {
-        return data.session.access_token;
-      }
+    const { data: refreshData, error: refreshErr } = await window.supabaseClient.auth.refreshSession();
+    if (!refreshErr && refreshData?.session?.access_token) {
+      return refreshData.session.access_token;
     }
   } catch (err) {
-    console.error("[GST Engine] Admin re-authentication failed:", err);
+    console.warn("[GST Engine] Admin session refresh warning:", err.message);
   }
 
   return null;

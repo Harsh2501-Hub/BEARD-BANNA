@@ -77,7 +77,8 @@ router.post('/login', async (req, res) => {
     );
 
     if (mongoose.connection.readyState !== 1) {
-      if (isAdminEmail && (password === 'Banna@7773' || password === 'AdminPass123!')) {
+      const configuredAdminPass = process.env.ADMIN_PASSWORD;
+      if (isAdminEmail && configuredAdminPass && password === configuredAdminPass) {
         const fallbackId = '64f1a2b3c4d5e6f7a8b9c099';
         const token = generateToken(fallbackId);
         return res.json({

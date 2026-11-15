@@ -211,11 +211,24 @@ function getPerSizeStockBadge(product) {
 function setupAngleFileInput(angleKey, fileInputId, urlInputId) {
   const fileInput = document.getElementById(fileInputId);
   const urlInput = document.getElementById(urlInputId);
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 
   if (fileInput) {
     fileInput.addEventListener("change", function (e) {
       const file = e.target.files[0];
       if (file) {
+        if (!ALLOWED_MIME.includes(file.type)) {
+          alert("Only JPG, PNG, and WebP product images are permitted.");
+          fileInput.value = "";
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert("Product image must be under 5MB.");
+          fileInput.value = "";
+          return;
+        }
+
         const reader = new FileReader();
         reader.onload = function (evt) {
           imageDataUrls[angleKey] = evt.target.result;

@@ -154,21 +154,21 @@ function renderCustomers(filteredCustomers = customers) {
       <tr>
         <td>
           <div class="customer-name">
-            <div class="customer-avatar">${customer.name ? customer.name.charAt(0).toUpperCase() : '👤'}</div>
-            <span>${customer.name}</span>
+            <div class="customer-avatar">${customer.name ? escapeHtml(customer.name.charAt(0).toUpperCase()) : '👤'}</div>
+            <span>${escapeHtml(customer.name)}</span>
           </div>
         </td>
-        <td>${customer.email}</td>
-        <td>${customer.phone}</td>
-        <td>${customer.orders}</td>
-        <td><span class="status ${customer.status ? customer.status.toLowerCase() : 'active'}">${customer.status || 'Active'}</span></td>
+        <td>${escapeHtml(customer.email)}</td>
+        <td>${escapeHtml(customer.phone)}</td>
+        <td>${Number(customer.orders || 0)}</td>
+        <td><span class="status ${customer.status ? escapeHtml(customer.status.toLowerCase()) : 'active'}">${escapeHtml(customer.status || 'Active')}</span></td>
         <td>
           <div style="display:flex; gap:6px;">
-            <button class="view-btn" onclick="viewCustomer('${customer.id}')">👁 View</button>
-            <button class="block-btn ${customer.status === 'Active' ? 'danger' : 'success'}" onclick="toggleCustomerStatus('${customer.id}')">
+            <button class="view-btn" onclick="viewCustomer('${escapeHtml(customer.id)}')">👁 View</button>
+            <button class="block-btn ${customer.status === 'Active' ? 'danger' : 'success'}" onclick="toggleCustomerStatus('${escapeHtml(customer.id)}')">
               ${customer.status === "Active" ? "🚫 Block" : "✅ Unblock"}
             </button>
-            <button class="delete-btn" onclick="deleteCustomer('${customer.id}')" style="background:#dc2626; color:white;">🗑 Delete</button>
+            <button class="delete-btn" onclick="deleteCustomer('${escapeHtml(customer.id)}')" style="background:#dc2626; color:white;">🗑 Delete</button>
           </div>
         </td>
       </tr>
@@ -205,14 +205,14 @@ function viewCustomer(id) {
   if (detailsContainer) {
     detailsContainer.innerHTML = `
       <div class="customer-info">
-        <div><strong>Name:</strong> ${customer.name}</div>
-        <div><strong>Email:</strong> ${customer.email}</div>
-        <div><strong>Phone:</strong> ${customer.phone}</div>
-        <div><strong>Orders:</strong> ${customer.orders}</div>
+        <div><strong>Name:</strong> ${escapeHtml(customer.name)}</div>
+        <div><strong>Email:</strong> ${escapeHtml(customer.email)}</div>
+        <div><strong>Phone:</strong> ${escapeHtml(customer.phone)}</div>
+        <div><strong>Orders:</strong> ${Number(customer.orders || 0)}</div>
         <div><strong>Total Spent:</strong> ₹${(customer.spent || 0).toLocaleString()}</div>
-        <div><strong>Status:</strong> ${customer.status}</div>
-        <div><strong>Joined:</strong> ${customer.joined}</div>
-        <div><strong>Address:</strong> ${customer.address}</div>
+        <div><strong>Status:</strong> ${escapeHtml(customer.status)}</div>
+        <div><strong>Joined:</strong> ${escapeHtml(customer.joined)}</div>
+        <div><strong>Address:</strong> ${escapeHtml(customer.address)}</div>
       </div>
     `;
   }

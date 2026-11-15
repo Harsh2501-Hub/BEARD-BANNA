@@ -72,6 +72,12 @@ async function initProductReviews(productId) {
         <p class="modal-sub">Share your legacy experience with the House of Beard Banna</p>
 
         <form id="review-form" onsubmit="handleReviewSubmit(event)">
+          <!-- Anti-spam Honeypot -->
+          <div style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; overflow: hidden;" aria-hidden="true">
+            <label for="review-hp">Royal Verification</label>
+            <input type="text" id="review-hp" name="review_bot_trap" tabindex="-1" autocomplete="off">
+          </div>
+
           <div class="form-group">
             <label>Your Rating <span class="required">*</span></label>
             <div class="star-rating-picker" id="star-picker">
@@ -277,7 +283,7 @@ function renderReviewsList(reviews) {
   let html = "";
   reviews.forEach(r => {
     const authorName = r.user?.name || r.authorName || "Royal Customer";
-    const authorAvatar = authorName.charAt(0).toUpperCase();
+    const authorAvatar = escapeHtml(authorName.charAt(0).toUpperCase());
     const isOwner = currentUser && (currentUser._id === r.user?._id || currentUser.email === r.user?.email);
     const dateStr = new Date(r.createdAt || Date.now()).toLocaleDateString("en-IN", { day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -285,41 +291,44 @@ function renderReviewsList(reviews) {
     if (Array.isArray(r.images) && r.images.length > 0) {
       imagesHTML = `<div class="review-images-grid">`;
       r.images.forEach(img => {
-        imagesHTML += `<img src="${img}" onclick="openLightboxModal('${img}')" class="review-thumbnail" alt="Review Photo">`;
+        const safeImg = String(img).startsWith('data:image/') || String(img).startsWith('images/') || String(img).startsWith('http') ? img : '';
+        if (safeImg) {
+          imagesHTML += `<img src="${safeImg}" onclick="openLightboxModal('${safeImg}')" class="review-thumbnail" alt="Customer Product Review Photo" loading="lazy">`;
+        }
       });
       imagesHTML += `</div>`;
     }
 
     html += `
-      <div class="review-card" id="review-card-${r._id || r.id}">
+      <div class="review-card" id="review-card-${escapeHtml(r._id || r.id)}">
         <div class="review-card-header">
           <div class="author-info">
             <div class="author-avatar">${authorAvatar}</div>
             <div>
-              <h4 class="author-name">${authorName}</h4>
+              <h4 class="author-name">${escapeHtml(authorName)}</h4>
               <div class="review-meta">
                 ${r.isVerifiedPurchase ? `<span class="verified-badge">✔ Verified Purchase</span>` : ''}
-                <small class="review-date">${dateStr}</small>
-                ${r.variantInfo?.size ? `<small class="variant-tag">Size: ${r.variantInfo.size}</small>` : ''}
+                <small class="review-date">${escapeHtml(dateStr)}</small>
+                ${r.variantInfo?.size ? `<small class="variant-tag">Size: ${escapeHtml(r.variantInfo.size)}</small>` : ''}
               </div>
             </div>
           </div>
           <div class="review-stars-box">${renderStars(r.rating)}</div>
         </div>
 
-        <h3 class="review-card-title">${r.title || 'Exceptional Quality'}</h3>
-        <p class="review-card-comment">${r.comment}</p>
+        <h3 class="review-card-title">${escapeHtml(r.title || 'Exceptional Quality')}</h3>
+        <p class="review-card-comment">${escapeHtml(r.comment)}</p>
 
         ${imagesHTML}
 
         <div class="review-card-footer">
-          <button class="helpful-btn" onclick="voteReviewHelpful('${r._id || r.id}', this)">
-            👍 Helpful (<span class="helpful-count">${r.helpfulCount || 0}</span>)
+          <button class="helpful-btn" onclick="voteReviewHelpful('${escapeHtml(r._id || r.id)}', this)">
+            👍 Helpful (<span class="helpful-count">${Number(r.helpfulCount || 0)}</span>)
           </button>
 
           <div class="owner-actions">
-            ${isOwner ? `<button class="edit-review-btn" onclick="openEditReviewModal('${r._id || r.id}')">✏ Edit Review</button>` : ''}
-            ${isAdmin ? `<button class="delete-review-btn" onclick="deleteCustomerReview('${r._id || r.id}')">🗑 Delete (Admin Only)</button>` : ''}
+            ${isOwner ? `<button class="edit-review-btn" onclick="openEditReviewModal('${escapeHtml(r._id || r.id)}')">✏ Edit Review</button>` : ''}
+            ${isAdmin ? `<button class="delete-review-btn" onclick="deleteCustomerReview('${escapeHtml(r._id || r.id)}')">🗑 Delete (Admin Only)</button>` : ''}
           </div>
         </div>
       </div>
@@ -426,10 +435,16 @@ function handleReviewImageUpload(e) {
   if (!files || files.length === 0) return;
 
   const container = document.getElementById("image-preview-container");
+  const ALLOWED_MIME = ['image/jpeg', 'image/png', 'image/webp'];
 
   Array.from(files).forEach(file => {
+    if (!ALLOWED_MIME.includes(file.type)) {
+      alert("Only JPG, PNG, and WebP review photos are accepted.");
+      return;
+    }
+
     if (file.size > 3 * 1024 * 1024) {
-      alert("Image must be smaller than 3MB.");
+      alert("Review photo must be smaller than 3MB.");
       return;
     }
 
@@ -440,10 +455,22 @@ function handleReviewImageUpload(e) {
 
       const div = document.createElement("div");
       div.className = "preview-thumb-box";
-      div.innerHTML = `
-        <img src="${base64}">
-        <button type="button" class="remove-img-btn" onclick="removeUploadedImage('${base64}', this)">&times;</button>
-      `;
+
+      const imgEl = document.createElement("img");
+      imgEl.src = base64;
+      imgEl.alt = "Review Upload Attachment Preview";
+
+      const removeBtn = document.createElement("button");
+      removeBtn.type = "button";
+      removeBtn.className = "remove-img-btn";
+      removeBtn.innerHTML = "&times;";
+      removeBtn.addEventListener("click", () => {
+        uploadedReviewImages = uploadedReviewImages.filter(img => img !== base64);
+        div.remove();
+      });
+
+      div.appendChild(imgEl);
+      div.appendChild(removeBtn);
       container.appendChild(div);
     };
     reader.readAsDataURL(file);
@@ -452,13 +479,32 @@ function handleReviewImageUpload(e) {
 
 function removeUploadedImage(base64, btnEl) {
   uploadedReviewImages = uploadedReviewImages.filter(img => img !== base64);
-  btnEl.parentElement.remove();
+  if (btnEl && btnEl.parentElement) btnEl.parentElement.remove();
 }
+
+let lastReviewSubmitTime = 0;
 
 async function handleReviewSubmit(e) {
   e.preventDefault();
 
   const submitBtn = document.getElementById("submit-review-btn");
+
+  // Anti-spam honeypot verification
+  const hp = document.getElementById("review-hp")?.value || "";
+  if (hp.trim().length > 0) {
+    console.warn("[Beard Banna Security] Bot review submission rejected via honeypot.");
+    closeReviewModal();
+    if (typeof showToast === "function") showToast("✨ Thank you! Review submitted successfully!");
+    return;
+  }
+
+  // Cooldown rate limiting (15 seconds between submissions)
+  const now = Date.now();
+  if (now - lastReviewSubmitTime < 15000) {
+    if (typeof showToast === "function") showToast("⏳ Please wait a moment before submitting another review.");
+    return;
+  }
+
   submitBtn.disabled = true;
   submitBtn.innerHTML = `<span class="loader"></span> Submitting...`;
 
@@ -467,6 +513,22 @@ async function handleReviewSubmit(e) {
   const comment = document.getElementById("review-comment-input").value.trim();
   const sizeSelect = document.getElementById("size");
   const size = sizeSelect ? sizeSelect.value : "M";
+
+  if (title.length < 2 || title.length > 100) {
+    alert("Please enter a review headline (2 to 100 characters).");
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `✨ Submit Review`;
+    return;
+  }
+
+  if (comment.length < 5 || comment.length > 1000) {
+    alert("Please enter a detailed review (5 to 1000 characters).");
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = `✨ Submit Review`;
+    return;
+  }
+
+  lastReviewSubmitTime = now;
 
   try {
     if (editingReviewId) {

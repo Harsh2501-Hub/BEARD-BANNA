@@ -121,6 +121,47 @@ async function loadProductDetail() {
   const backImg = currentProduct.backImage || currentProduct.secondaryImage || (currentProduct.images && currentProduct.images[1]) || frontImg;
   const sideImg = currentProduct.sideImage || (currentProduct.images && currentProduct.images[2]) || frontImg;
 
+  // Update dynamic SEO page title & meta description
+  try {
+    const fullTitle = `${currentProduct.name} | BEARD BANNA — Royal Heritage Apparel`;
+    const fullDesc = `${currentProduct.name} by BEARD BANNA. ${currentProduct.description || 'Crafted with royal Rajputana scriptures and 100% premium cotton.'}`;
+    document.title = fullTitle;
+    const metaDesc = document.querySelector('meta[name="description"]');
+    if (metaDesc) {
+      metaDesc.setAttribute('content', fullDesc);
+    }
+
+    // Dynamic Open Graph & Twitter Social Metadata
+    const absImg = new URL(frontImg || 'images/Product 1.jpeg', window.location.href).href;
+    const ogTitle = document.getElementById('og-title') || document.querySelector('meta[property="og:title"]');
+    if (ogTitle) ogTitle.setAttribute('content', fullTitle);
+    const ogDesc = document.getElementById('og-desc') || document.querySelector('meta[property="og:description"]');
+    if (ogDesc) ogDesc.setAttribute('content', fullDesc);
+    const ogImg = document.getElementById('og-img') || document.querySelector('meta[property="og:image"]');
+    if (ogImg) ogImg.setAttribute('content', absImg);
+
+    const twTitle = document.getElementById('twitter-title') || document.querySelector('meta[name="twitter:title"]');
+    if (twTitle) twTitle.setAttribute('content', fullTitle);
+    const twDesc = document.getElementById('twitter-desc') || document.querySelector('meta[name="twitter:description"]');
+    if (twDesc) twDesc.setAttribute('content', fullDesc);
+    const twImg = document.getElementById('twitter-img') || document.querySelector('meta[name="twitter:image"]');
+    if (twImg) twImg.setAttribute('content', absImg);
+  } catch (e) {}
+
+  // Google Analytics 4: view_item event
+  if (typeof window.trackGAEvent === 'function') {
+    window.trackGAEvent('view_item', {
+      currency: 'INR',
+      value: currentProduct.price,
+      items: [{
+        item_id: String(currentProduct.id),
+        item_name: currentProduct.name,
+        price: currentProduct.price,
+        item_category: currentProduct.category || 'T-Shirts'
+      }]
+    });
+  }
+
   // Build sizeMap from product — ensure all standard sizes are present
   const sizeMap = currentProduct.sizeStock || {};
   const allSizes = ["S", "M", "L", "XL", "XXL"];
@@ -134,12 +175,46 @@ async function loadProductDetail() {
   const initialStock = sizeMap[defaultSize] || 0;
   const isInitiallyOut = initialStock === 0;
 
+  // Dynamic Schema.org Product Structured Data injection
+  try {
+    const jsonLdEl = document.getElementById('product-jsonld');
+    if (jsonLdEl) {
+      const baseUrl = window.location.origin;
+      const schemaData = {
+        "@context": "https://schema.org/",
+        "@type": "Product",
+        "name": currentProduct.name,
+        "image": [
+          new URL(frontImg, window.location.href).href,
+          new URL(backImg, window.location.href).href,
+          new URL(sideImg, window.location.href).href
+        ],
+        "description": currentProduct.description || "Premium Rajputana royal heritage apparel crafted with pride.",
+        "sku": `BB-PROD-${currentProduct.id}`,
+        "brand": {
+          "@type": "Brand",
+          "name": "BEARD BANNA"
+        },
+        "offers": {
+          "@type": "Offer",
+          "url": window.location.href,
+          "priceCurrency": "INR",
+          "price": Number(currentProduct.price || 0),
+          "priceValidUntil": "2027-12-31",
+          "availability": initialStock > 0 ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
+          "itemCondition": "https://schema.org/NewCondition"
+        }
+      };
+      jsonLdEl.textContent = JSON.stringify(schemaData, null, 2);
+    }
+  } catch (e) {}
+
   container.innerHTML = `
     <div class="product-page">
       <!-- 3-ANGLE IMAGE GALLERY CONTAINER -->
       <div class="product-gallery-wrapper" style="flex:1; max-width:550px;">
         <div class="main-image-container" style="position:relative; overflow:hidden; border-radius:12px; border:2px solid #520F16; background:#0f172a; cursor:zoom-in;" onclick="openZoomLightbox(document.getElementById('large-product-img').src)">
-          <img id="large-product-img" src="${frontImg}" class="product-image-large" alt="${currentProduct.name}" onerror="this.onerror=null; this.src='images/Product 1.jpeg';" style="width:100%; height:480px; object-fit:cover; display:block; transition:transform 0.3s ease;">
+          <img id="large-product-img" src="${frontImg}" class="product-image-large" alt="${currentProduct.name} — Full High-Resolution Rajputana Apparel View" onerror="this.onerror=null; this.src='images/Product 1.jpeg';" style="width:100%; height:480px; object-fit:cover; display:block; transition:transform 0.3s ease;">
           <div style="position:absolute; bottom:12px; right:12px; background:rgba(0,0,0,0.75); color:#fbbf24; padding:6px 12px; border-radius:20px; font-size:0.78rem; font-weight:700; backdrop-filter:blur(4px); pointer-events:none;">
             🔍 Click for High-Res Detail Zoom
           </div>
@@ -148,17 +223,17 @@ async function loadProductDetail() {
         <!-- THUMBNAILS (FRONT, BACK, SIDE) -->
         <div class="product-thumbnails-grid" style="display:grid; grid-template-columns: repeat(3, 1fr); gap:10px; margin-top:12px;">
           <div class="thumb-card active" onclick="switchProductAngle('${frontImg}', 'Front View', this)" style="border:2px solid #fbbf24; border-radius:8px; overflow:hidden; cursor:pointer; background:#1e293b; padding:4px; text-align:center;">
-            <img src="${frontImg}" alt="Front View" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+            <img src="${frontImg}" alt="${currentProduct.name} Front Angle" loading="lazy" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
             <span style="display:block; font-size:0.75rem; font-weight:700; color:#fbbf24; margin-top:4px;">📸 Front View</span>
           </div>
 
           <div class="thumb-card" onclick="switchProductAngle('${backImg}', 'Back View', this)" style="border:2px solid #334155; border-radius:8px; overflow:hidden; cursor:pointer; background:#1e293b; padding:4px; text-align:center;">
-            <img src="${backImg}" alt="Back View" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 2.jpeg';">
+            <img src="${backImg}" alt="${currentProduct.name} Back Angle" loading="lazy" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 2.jpeg';">
             <span style="display:block; font-size:0.75rem; font-weight:700; color:#94a3b8; margin-top:4px;">🔄 Back View</span>
           </div>
 
           <div class="thumb-card" onclick="switchProductAngle('${sideImg}', 'Side View', this)" style="border:2px solid #334155; border-radius:8px; overflow:hidden; cursor:pointer; background:#1e293b; padding:4px; text-align:center;">
-            <img src="${sideImg}" alt="Side View" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 3.jpeg';">
+            <img src="${sideImg}" alt="${currentProduct.name} Profile Side Angle" loading="lazy" style="width:100%; height:80px; object-fit:cover; border-radius:4px;" onerror="this.onerror=null; this.src='images/Product 3.jpeg';">
             <span style="display:block; font-size:0.75rem; font-weight:700; color:#94a3b8; margin-top:4px;">📐 Side View</span>
           </div>
         </div>
@@ -176,7 +251,12 @@ async function loadProductDetail() {
         </div>
         <p>${currentProduct.description || 'Premium royal Rajputana apparel.'}</p>
         
-        <label for="size">Choose Size</label>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:16px; margin-bottom:6px;">
+          <label for="size" style="margin:0; font-weight:600;">Choose Size</label>
+          <button type="button" id="size-guide-trigger-btn" onclick="openSizeGuideModal()" style="background:none; border:none; color:#fbbf24; font-size:0.86rem; font-weight:700; cursor:pointer; text-decoration:underline; display:flex; align-items:center; gap:5px; padding:2px 0;">
+            📏 View Size Guide
+          </button>
+        </div>
         <select id="size" onchange="onSizeSelected(this.value)">
           ${allSizes.map(size => {
             const qty = sizeMap[size] || 0;
@@ -268,7 +348,7 @@ window.openZoomLightbox = function(imgSrc) {
     modal.innerHTML = `
       <div style="position:relative; max-width:90vw; max-height:90vh; text-align:center;">
         <span style="position:absolute; top:-40px; right:0; color:#fbbf24; font-size:2rem; font-weight:700; cursor:pointer;">✕</span>
-        <img id="lightbox-zoom-img" src="" style="max-width:100%; max-height:85vh; object-fit:contain; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.8); border:2px solid #fbbf24;">
+        <img id="lightbox-zoom-img" src="" alt="High-Resolution Fabric and Embroidery Preview" style="max-width:100%; max-height:85vh; object-fit:contain; border-radius:12px; box-shadow:0 25px 50px -12px rgba(0,0,0,0.8); border:2px solid #fbbf24;">
         <p style="color:#cbd5e1; font-weight:600; margin-top:10px; font-size:0.9rem;">🔎 Detailed View — High-Resolution Fabric & Embroidery Preview</p>
       </div>
     `;
@@ -362,5 +442,33 @@ window.buyNow = async function () {
     window.location.href = "cart.html";
   }, 300);
 };
+
+// ===============================
+// SIZE GUIDE MODAL CONTROLS
+// ===============================
+window.openSizeGuideModal = function () {
+  const modal = document.getElementById("size-guide-modal");
+  if (modal) modal.style.display = "flex";
+};
+
+window.closeSizeGuideModal = function () {
+  const modal = document.getElementById("size-guide-modal");
+  if (modal) modal.style.display = "none";
+};
+
+// Dismiss on backdrop click
+window.addEventListener("click", function (e) {
+  const modal = document.getElementById("size-guide-modal");
+  if (modal && e.target === modal) {
+    window.closeSizeGuideModal();
+  }
+});
+
+// Dismiss on ESC key
+window.addEventListener("keydown", function (e) {
+  if (e.key === "Escape") {
+    window.closeSizeGuideModal();
+  }
+});
 
 document.addEventListener("DOMContentLoaded", loadProductDetail);

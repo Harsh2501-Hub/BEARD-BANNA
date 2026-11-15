@@ -35,7 +35,33 @@
   if (!isAuthenticated) {
     alert('Please login to continue to checkout.');
     window.location.href = 'login.html';
+    return;
   }
+
+  // Auto-prefill delivery fields for returning customer
+  try {
+    const activeUser = (window.API && API.getCurrentUser()) || null;
+    if (activeUser) {
+      const nameEl = document.getElementById("name");
+      const emailEl = document.getElementById("email");
+      const phoneEl = document.getElementById("phone");
+      if (nameEl && !nameEl.value && activeUser.name) nameEl.value = activeUser.name;
+      if (emailEl && !emailEl.value && activeUser.email) emailEl.value = activeUser.email;
+      if (phoneEl && !phoneEl.value && activeUser.phone) phoneEl.value = activeUser.phone;
+    }
+
+    const savedAddr = JSON.parse(localStorage.getItem('bb_saved_shipping_address') || 'null');
+    if (savedAddr) {
+      const addrEl = document.getElementById("address");
+      const cityEl = document.getElementById("city");
+      const stateEl = document.getElementById("state");
+      const pinEl = document.getElementById("pincode");
+      if (addrEl && !addrEl.value && savedAddr.address) addrEl.value = savedAddr.address;
+      if (cityEl && !cityEl.value && savedAddr.city) cityEl.value = savedAddr.city;
+      if (stateEl && !stateEl.value && savedAddr.state) stateEl.value = savedAddr.state;
+      if (pinEl && !pinEl.value && savedAddr.pincode) pinEl.value = savedAddr.pincode;
+    }
+  } catch (e) {}
 })();
 
 // ── Cart and DOM references ────────────────────────────────────────────────
@@ -68,8 +94,32 @@ if (cart.length === 0) {
   if (typeof syncGSTSettingsFromDB === 'function') {
     try { await syncGSTSettingsFromDB(); } catch (e) {}
   }
-  if (cart.length > 0) displaySummary();
+  if (cart.length > 0) {
+    displaySummary();
+    if (typeof window.trackGAEvent === 'function') {
+      window.trackGAEvent('begin_checkout', {
+        value: subtotal,
+        currency: 'INR',
+        items: cart.map(i => ({
+          item_id: String(i.id || i._id || 'PROD-1001'),
+          item_name: i.name,
+          price: i.price,
+          quantity: i.qty || 1
+        }))
+      });
+    }
+  }
 })();
+
+// Authoritative catalog price bounds to defeat client-side price tampering
+const AUTH_PRICES = {
+  "1": 999,
+  "2": 1299,
+  "3": 1999,
+  "royal warrior embroidered tee": 999,
+  "imperial heritage polo shirt": 1299,
+  "rajputana valor heavyweight hoodie": 1999
+};
 
 function displaySummary() {
   if (!summary) return;
@@ -77,14 +127,20 @@ function displaySummary() {
   subtotal = 0;
 
   cart.forEach(item => {
-    const total = item.price * (item.qty || 1);
+    // Enforce authoritative catalog price
+    const prodKey = String(item.id || item._id || '').trim();
+    const nameKey = String(item.name || '').toLowerCase().trim();
+    const verifiedPrice = AUTH_PRICES[prodKey] || AUTH_PRICES[nameKey] || Number(item.price) || 0;
+    item.price = verifiedPrice;
+
+    const total = verifiedPrice * (item.qty || 1);
     subtotal += total;
 
     summary.innerHTML += `
       <div class="summary-item">
         <div>
-          <strong>${item.name}</strong><br>
-          <small>Qty : ${item.qty || 1} ${item.size ? "| Size : " + item.size : ""} | HSN: 6109</small>
+          <strong>${escapeHtml(item.name)}</strong><br>
+          <small>Qty : ${Number(item.qty || 1)} ${item.size ? "| Size : " + escapeHtml(item.size) : ""} | HSN: 6109</small>
         </div>
         <div>₹${total}</div>
       </div>
@@ -153,18 +209,48 @@ paymentRadios.forEach(radio => {
   });
 });
 
-// Coupon Code
+// Coupon Code (Server & Database Verified)
 async function applyCoupon(code) {
-  if (!code) return;
+  if (!code || !code.trim()) {
+    alert("Please enter a coupon code.");
+    return;
+  }
+
+  const cleanCode = code.trim().toUpperCase();
+
+  // 1. Primary: Verify via Supabase RPC function (Direct DB verification)
+  if (window.supabaseClient) {
+    try {
+      const { data, error } = await window.supabaseClient.rpc('validate_coupon', {
+        p_code: cleanCode,
+        p_subtotal: subtotal
+      });
+
+      if (!error && data && data.success) {
+        appliedCouponCode = data.code;
+        appliedDiscount = Number(data.discount || 0);
+        calculateTotals();
+        if (typeof showToast === "function") showToast(data.message || `🎉 Coupon ${appliedCouponCode} applied!`);
+        return;
+      } else if (data && !data.success) {
+        alert(data.message || "Invalid coupon code.");
+        return;
+      }
+    } catch (e) {
+      console.warn('[Coupon] Supabase RPC check notice:', e.message);
+    }
+  }
+
+  // 2. Secondary: Verify via Express REST API
   try {
-    const res = await API.post('/coupons/validate', { code, orderAmount: subtotal });
-    if (res.success && res.data) {
-      appliedDiscount = res.data.discountAmount || 0;
-      appliedCouponCode = code.toUpperCase();
+    const res = await API.post('/coupons/validate', { code: cleanCode, orderAmount: subtotal });
+    if (res && res.success && res.data) {
+      appliedDiscount = Number(res.data.discountAmount || res.data.discount || 0);
+      appliedCouponCode = cleanCode;
       calculateTotals();
       if (typeof showToast === "function") showToast(`🎉 Coupon ${appliedCouponCode} applied! Saved ₹${appliedDiscount}`);
     } else {
-      alert(res.message || "Invalid coupon code.");
+      alert(res?.message || "Invalid coupon code.");
     }
   } catch (err) {
     alert(err.message || "Invalid coupon code.");
@@ -177,6 +263,13 @@ const checkoutForm = document.getElementById("checkout-form");
 if (checkoutForm) {
   checkoutForm.addEventListener("submit", function (e) {
     e.preventDefault();
+
+    // Anti-spam bot honeypot verification
+    const honeypot = document.getElementById("checkout-hp")?.value || "";
+    if (honeypot.trim().length > 0) {
+      console.warn("[Beard Banna Security] Bot order submission rejected via honeypot.");
+      return;
+    }
 
     const name = document.getElementById("name")?.value.trim();
     const email = document.getElementById("email")?.value.trim();
@@ -210,6 +303,16 @@ if (checkoutForm) {
     }
 
     orderData = { name, email, phone, address, city, state, pincode, gstin: gstin || "N/A", payment: payment.value };
+
+    // Analytics Event: Add payment info
+    if (typeof window.trackGAEvent === 'function') {
+      window.trackGAEvent('add_payment_info', {
+        payment_type: payment.value,
+        value: grandTotal,
+        currency: 'INR'
+      });
+    }
+
     showConfirmation();
   });
 }
@@ -226,7 +329,7 @@ function showConfirmation() {
     totalItems += item.qty || 1;
     confirmProducts.innerHTML += `
       <div class="confirm-item">
-        <img src="${item.image}">
+        <img src="${item.image}" alt="${item.name || 'Order Item'}" loading="lazy">
         <div>
           <h4>${item.name}</h4>
           <p>Qty : ${item.qty || 1} | Size : ${item.size || 'M'} | HSN: 6109</p>
@@ -660,7 +763,24 @@ async function finalizeOrder(paymentMeta = {}) {
     }
   } catch (e) {}
 
-  // ── STEP 6: Redirect — only reached if Supabase save succeeded ─────
+  // ── STEP 6: Analytics Purchase Event (No sensitive personal info sent) ──
+  if (typeof window.trackGAEvent === 'function') {
+    window.trackGAEvent('purchase', {
+      transaction_id: orderId,
+      value: grandTotal,
+      currency: 'INR',
+      tax: gstSnapshot.enabled ? gstSnapshot.totalGST : 0,
+      shipping: shipping,
+      items: orderItems.map(i => ({
+        item_id: String(i.productId),
+        item_name: i.name,
+        price: i.price,
+        quantity: i.quantity
+      }))
+    });
+  }
+
+  // ── STEP 7: Redirect — only reached if Supabase save succeeded ─────
   if (btn) btn.innerHTML = `✅ Order Confirmed! Redirecting...`;
   window.location.href = "order-success.html";
 }

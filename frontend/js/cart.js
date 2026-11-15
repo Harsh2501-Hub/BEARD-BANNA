@@ -117,6 +117,21 @@ async function addToCart(productId, size = "M", qty = 1) {
 
   saveCart();
 
+  // Track Google Analytics 4 event: add_to_cart
+  if (typeof window.trackGAEvent === 'function') {
+    window.trackGAEvent('add_to_cart', {
+      value: product.price * (qty || 1),
+      currency: 'INR',
+      items: [{
+        item_id: String(product.id || productId),
+        item_name: product.name,
+        price: product.price,
+        quantity: qty || 1,
+        item_variant: size
+      }]
+    });
+  }
+
   const token = API.getToken();
   if (token) {
     try {
@@ -135,6 +150,19 @@ async function addToCart(productId, size = "M", qty = 1) {
 // Remove Product from Cart
 async function removeItem(index) {
   const item = cart[index];
+  if (item && typeof window.trackGAEvent === 'function') {
+    window.trackGAEvent('remove_from_cart', {
+      value: (item.price || 0) * (item.qty || 1),
+      currency: 'INR',
+      items: [{
+        item_id: String(item.id || item._id),
+        item_name: item.name,
+        price: item.price,
+        quantity: item.qty || 1
+      }]
+    });
+  }
+
   cart.splice(index, 1);
   saveCart();
   displayCart();
@@ -171,7 +199,7 @@ function displayCart() {
 
     container.innerHTML += `
       <div class="cart-card">
-        <img src="${displayImg}" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+        <img src="${displayImg}" alt="${item.name || 'Apparel Item'} in Shopping Cart" loading="lazy" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
         <div class="cart-info">
           <h3>${item.name}</h3>
           <p>₹${item.price}</p>

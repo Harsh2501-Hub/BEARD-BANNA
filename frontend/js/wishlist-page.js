@@ -24,7 +24,7 @@ function displayWishlist() {
   localWishlist.forEach((item, index) => {
     container.innerHTML += `
       <div class="wishlist-card fade-card">
-        <img src="${item.image}" alt="${item.name}">
+        <img src="${item.image}" alt="${item.name || 'Wishlisted Item'}" loading="lazy">
         <div class="wishlist-info">
           <h3>${item.name}</h3>
           <p>₹${item.price}</p>

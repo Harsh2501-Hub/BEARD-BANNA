@@ -4,8 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sign Up | BEARD BANNA — Royal Heritage</title>
-    <meta name="description" content="Create your BEARD BANNA account and join the royal heritage apparel community.">
+    <title>Create an Account | BEARD BANNA — Join the Royal Heritage</title>
+    <meta name="description" content="Join the House of BEARD BANNA. Create your customer account to enjoy expedited checkout, exclusive collection drops, and live order tracking.">
+    <meta name="robots" content="noindex, follow">
 
     <!-- Google Fonts for Royal Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,7 +20,9 @@
 <body>
 
     <header>
-        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <a href="index.html" style="text-decoration:none;">
+            <img src="images/Logo-removebg-preview.png" alt="Beard Banna Royal Rajputana Logo" class="logo">
+        </a>
         <p>HONOR • HISTORY • HERITAGE</p>
     </header>
 
@@ -44,25 +47,31 @@
             <!-- Email verification / success message -->
             <div id="register-success" class="auth-success" style="display:none;"></div>
 
-            <form id="register-form">
+            <form id="register-form" autocomplete="on">
+                <!-- Honeypot anti-spam field (hidden from humans, bots fill it) -->
+                <div style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; overflow: hidden;" aria-hidden="true">
+                    <label for="register-hp">Royal Verification (leave empty)</label>
+                    <input type="text" id="register-hp" name="register_user_code" tabindex="-1" autocomplete="off">
+                </div>
+
                 <div class="input-wrapper" style="margin-bottom: 16px;">
                     <input type="text" id="register-name" placeholder="Full Name" required
-                        style="width: 100%;" autocomplete="name">
+                        maxlength="80" style="width: 100%;" autocomplete="name">
                 </div>
 
                 <div class="input-wrapper" style="margin-bottom: 16px;">
                     <input type="email" id="register-email" placeholder="Email Address" required
-                        style="width: 100%;" autocomplete="email">
+                        maxlength="100" style="width: 100%;" autocomplete="email">
                 </div>
 
                 <div class="input-wrapper" style="margin-bottom: 16px;">
                     <input type="tel" id="register-phone" placeholder="Phone Number (Optional)"
-                        style="width: 100%;" autocomplete="tel">
+                        maxlength="16" style="width: 100%;" autocomplete="tel">
                 </div>
 
                 <div class="input-wrapper password-wrapper" style="position: relative; margin-bottom: 16px;">
                     <input type="password" id="register-password" placeholder="Password (min. 6 characters)"
-                        required style="width: 100%;" autocomplete="new-password">
+                        required minlength="6" maxlength="64" style="width: 100%;" autocomplete="new-password">
                     <button type="button" class="eye-toggle-btn"
                         onclick="togglePasswordVisibility('register-password', this)"
                         title="Show/Hide Password"
@@ -73,7 +82,7 @@
 
                 <div class="input-wrapper password-wrapper" style="position: relative; margin-bottom: 20px;">
                     <input type="password" id="confirm-password" placeholder="Confirm Password"
-                        required style="width: 100%;" autocomplete="new-password">
+                        required minlength="6" maxlength="64" style="width: 100%;" autocomplete="new-password">
                     <button type="button" class="eye-toggle-btn"
                         onclick="togglePasswordVisibility('confirm-password', this)"
                         title="Show/Hide Password"
@@ -118,8 +127,21 @@
     </section>
 
     <footer>
-        <p style="margin: 0; padding: 10px 0;"><a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed &amp; Maintained by Himanshu ↗</a></p>
+        <p style="margin: 0 0 8px 0; font-size: 0.95rem; color: #94a3b8;">&copy; 2026 <b>BEARD BANNA</b>. All Rights Reserved. HONOR • HISTORY • HERITAGE</p>
+        <p style="margin: 0 0 10px 0; font-size: 0.88rem;">
+            <a href="index.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Home</a> |
+            <a href="collection.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Collection</a> |
+            <a href="track-order.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Track Order</a> |
+            <a href="privacy.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Privacy Policy</a> |
+            <a href="javascript:void(0)" onclick="if(window.openCookiePreferences) window.openCookiePreferences();" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Cookie Choices</a>
+        </p>
+        <p style="margin: 0; padding: 6px 0;">
+            <a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.15rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed &amp; Maintained by Himanshu ↗</a>
+        </p>
     </footer>
+
+    <!-- Google Analytics 4 & Cookie Consent -->
+    <script src="js/analytics-consent.js"></script>
 
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>

@@ -13,6 +13,9 @@ const PORT = process.env.PORT || 5000;
 const Product = require('./models/Product');
 const User = require('./models/User');
 
+// Import Middleware
+const { protect, adminOnly } = require('./middleware/authMiddleware');
+
 // Import Routes
 const authRoutes = require('./routes/authRoutes');
 const productRoutes = require('./routes/productRoutes');
@@ -20,11 +23,29 @@ const orderRoutes = require('./routes/orderRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
 const inquiryRoutes = require('./routes/inquiryRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
+const couponRoutes = require('./routes/couponRoutes');
 
-// Middleware
-app.use(cors());
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Secure CORS Origin Whitelist
+const allowedOrigins = [
+  'https://beard-banna.vercel.app',
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:5000',
+  'http://127.0.0.1:5000'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin) || origin.endsWith('.vercel.app')) {
+      callback(null, true);
+    } else {
+      callback(new Error('Cross-Origin Request Blocked by Security Policy'));
+    }
+  },
+  credentials: true
+}));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Health Check Route
 app.get('/api/v1/health', (req, res) => {
@@ -42,6 +63,7 @@ app.use('/api/v1/orders', orderRoutes);
 app.use('/api/v1/reviews', reviewRoutes);
 app.use('/api/v1/inquiries', inquiryRoutes);
 app.use('/api/v1/payment', paymentRoutes);
+app.use('/api/v1/coupons', couponRoutes);
 
 // Seed Default Products with 3 Multi-Angle Images (Front, Back, Side)
 const seedInitialData = async () => {
@@ -160,8 +182,8 @@ const migrateStockSync = async () => {
   }
 };
 
-// Admin-only migration trigger endpoint
-app.post('/api/v1/admin/migrate-stock', async (req, res) => {
+// Admin-only migration trigger endpoint (Protected)
+app.post('/api/v1/admin/migrate-stock', protect, adminOnly, async (req, res) => {
   try {
     await migrateStockSync();
     res.json({ success: true, message: 'Stock sync migration complete' });

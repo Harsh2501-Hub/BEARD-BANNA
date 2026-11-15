@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Product = require('../models/Product');
+const { protect, adminOnly } = require('../middleware/authMiddleware');
 
 // ── Helper: format a Mongoose product doc into a clean API response ──────────
 function formatProduct(p) {
@@ -324,8 +325,8 @@ router.get('/:id', async (req, res) => {
 });
 
 // @route   POST /api/v1/products
-// @desc    Add a new product (persisted in local file & MongoDB)
-router.post('/', async (req, res) => {
+// @desc    Add a new product (Admin Only)
+router.post('/', protect, adminOnly, async (req, res) => {
   try {
     const body = { ...req.body };
 
@@ -399,8 +400,8 @@ router.post('/', async (req, res) => {
 });
 
 // @route   PUT /api/v1/products/:id
-// @desc    Update product (including stock per size)
-router.put('/:id', async (req, res) => {
+// @desc    Update product (Admin Only)
+router.put('/:id', protect, adminOnly, async (req, res) => {
   try {
     const idParam = req.params.id;
     const body = { ...req.body };
@@ -473,8 +474,8 @@ router.put('/:id', async (req, res) => {
 });
 
 // @route   DELETE /api/v1/products/:id
-// @desc    Delete product
-router.delete('/:id', async (req, res) => {
+// @desc    Delete product (Admin Only)
+router.delete('/:id', protect, adminOnly, async (req, res) => {
   try {
     const idParam = req.params.id;
 

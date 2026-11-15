@@ -256,12 +256,12 @@ function renderOrders(filteredOrders = orders) {
 
     html += `
       <tr>
-        <td><strong>${order.id || order.orderId}</strong></td>
+        <td><strong>${escapeHtml(order.id || order.orderId)}</strong></td>
         <td>
-          <div>${order.customer}</div>
-          <small style="color:#94a3b8;">${order.email || ''}</small>
+          <div>${escapeHtml(order.customer)}</div>
+          <small style="color:#94a3b8;">${escapeHtml(order.email || '')}</small>
         </td>
-        <td>₹${order.total || order.grandTotal || 0}</td>
+        <td>₹${Number(order.total || order.grandTotal || 0).toLocaleString('en-IN')}</td>
         <td>
           <select class="status-select ${formattedStatus.toLowerCase()}" onchange="updateOrderStatus('${orderIdentifier}', this.value, this)">
             <option value="Processing" ${formattedStatus === "Processing" ? "selected" : ""}>Processing</option>
@@ -273,7 +273,7 @@ function renderOrders(filteredOrders = orders) {
             <option value="Cancelled" ${formattedStatus === "Cancelled" ? "selected" : ""}>Cancelled</option>
           </select>
         </td>
-        <td>${order.date || "Today"}</td>
+        <td>${escapeHtml(order.date || "Today")}</td>
         <td>
           <div class="action-buttons" style="display:flex; gap:6px;">
             <button class="view-btn" onclick="viewOrder('${orderIdentifier}')">👁 View</button>
@@ -597,8 +597,8 @@ function viewOrder(id) {
   items.forEach(item => {
     itemsHTML += `
       <li>
-        <strong>${item.name || item.title}</strong><br>
-        Size : ${item.size || 'M'} | Qty : ${item.quantity || item.qty || 1} | Price : ₹${item.price}
+        <strong>${escapeHtml(item.name || item.title)}</strong><br>
+        Size : ${escapeHtml(item.size || 'M')} | Qty : ${Number(item.quantity || item.qty || 1)} | Price : ₹${Number(item.price || 0)}
       </li>
       <hr>
     `;
@@ -619,25 +619,25 @@ function viewOrder(id) {
   if (detailsContainer) {
     detailsContainer.innerHTML = `
       <div style="border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 12px; margin-bottom: 15px;">
-        <h2 style="color:#fbbf24; margin:0 0 5px 0;">Order #${order.id || order.orderId}</h2>
-        <span style="color:#94a3b8; font-size:0.85rem;">Date: ${order.date || 'Today'}</span>
+        <h2 style="color:#fbbf24; margin:0 0 5px 0;">Order #${escapeHtml(order.id || order.orderId)}</h2>
+        <span style="color:#94a3b8; font-size:0.85rem;">Date: ${escapeHtml(order.date || 'Today')}</span>
       </div>
 
       <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:15px; font-size:0.92rem;">
         <div>
-          <p><strong>Customer:</strong> ${order.customer || order.name || 'Customer'}</p>
-          <p><strong>Email:</strong> ${order.email || "N/A"}</p>
-          <p><strong>Phone:</strong> ${order.phone || "N/A"}</p>
+          <p><strong>Customer:</strong> ${escapeHtml(order.customer || order.name || 'Customer')}</p>
+          <p><strong>Email:</strong> ${escapeHtml(order.email || "N/A")}</p>
+          <p><strong>Phone:</strong> ${escapeHtml(order.phone || "N/A")}</p>
         </div>
         <div>
-          <p><strong>Payment:</strong> <span style="color:#38bdf8; font-weight:700;">${order.payment || "COD"}</span> (${order.paymentStatus || 'Pending'})</p>
-          ${order.razorpayPaymentId ? `<p><strong>Razorpay ID:</strong> <code>${order.razorpayPaymentId}</code></p>` : ''}
-          <p><strong>Status:</strong> <span class="badge ${order.status ? order.status.toLowerCase() : 'processing'}">${order.status || 'Processing'}</span></p>
+          <p><strong>Payment:</strong> <span style="color:#38bdf8; font-weight:700;">${escapeHtml(order.payment || "COD")}</span> (${escapeHtml(order.paymentStatus || 'Pending')})</p>
+          ${order.razorpayPaymentId ? `<p><strong>Razorpay ID:</strong> <code>${escapeHtml(order.razorpayPaymentId)}</code></p>` : ''}
+          <p><strong>Status:</strong> <span class="badge ${order.status ? escapeHtml(order.status.toLowerCase()) : 'processing'}">${escapeHtml(order.status || 'Processing')}</span></p>
         </div>
       </div>
 
       <div style="margin-bottom:15px; font-size:0.92rem;">
-        <p><strong>Shipping Address:</strong><br><span style="color:#cbd5e1;">${order.address || "N/A"}</span></p>
+        <p><strong>Shipping Address:</strong><br><span style="color:#cbd5e1;">${escapeHtml(order.address || "N/A")}</span></p>
       </div>
 
       <h3 style="color:#fbbf24; margin:15px 0 8px 0; font-size:1rem;">Ordered Items</h3>

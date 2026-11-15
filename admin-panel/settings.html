@@ -132,6 +132,22 @@
             <input type="number" value="1999" style="width:100%; padding:10px; border:1px solid #334155; border-radius:8px; background:#0f172a; color:white;">
           </div>
 
+          <!-- ADMIN MFA & TWO-FACTOR AUTHENTICATION -->
+          <div style="background: rgba(15, 23, 42, 0.8); border: 1px solid #334155; border-radius: 10px; padding: 20px; margin-bottom: 25px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <div>
+                <h3 style="color:#fbbf24; margin:0 0 4px 0; font-size:1.05rem;">🔐 Admin Multi-Factor Authentication (MFA / 2FA)</h3>
+                <p style="color:#94a3b8; margin:0; font-size:0.85rem;">Enforce Time-Based One-Time Password (TOTP) verification for all administrator logins via Google Authenticator or Authy.</p>
+              </div>
+              <button type="button" id="mfa-toggle-btn" onclick="handleAdminMFASetup()" style="background:#16a34a; color:white; border:none; padding:8px 16px; border-radius:6px; font-weight:700; cursor:pointer;">
+                🛡️ Setup TOTP 2FA
+              </button>
+            </div>
+            <div id="mfa-status-text" style="color:#38bdf8; font-size:0.85rem; margin-top:10px;">
+              Status: Ready for enrollment via Supabase Auth
+            </div>
+          </div>
+
           <button type="submit" style="background:#4f46e5; color:white; padding:12px 24px; border:none; border-radius:8px; font-weight:700; cursor:pointer;">
             💾 Save Settings
           </button>

@@ -15,7 +15,12 @@ window.togglePasswordVisibility = function (inputId, btn) {
   }
 };
 
+// Form spam guard timestamp & rate-limiting
+let registerFormLoadedAt = Date.now();
+let lastRegisterAttempt = 0;
+
 document.addEventListener('DOMContentLoaded', async function () {
+  registerFormLoadedAt = Date.now();
 
   // ── If already logged in, redirect to home ──────────────
   if (window.supabaseClient && window.SupabaseAuth) {
@@ -36,12 +41,6 @@ document.addEventListener('DOMContentLoaded', async function () {
 });
 
 async function handleRegister() {
-  const name = document.getElementById('register-name')?.value.trim() || '';
-  const email = document.getElementById('register-email')?.value.trim().toLowerCase() || '';
-  const phone = document.getElementById('register-phone')?.value.trim() || '';
-  const password = document.getElementById('register-password')?.value || '';
-  const confirmPassword = document.getElementById('confirm-password')?.value || '';
-
   const submitBtn = document.querySelector('#register-form button[type="submit"]');
   const errorDiv = document.getElementById('register-error');
   const successDiv = document.getElementById('register-success');
@@ -49,31 +48,62 @@ async function handleRegister() {
   hideMessage(errorDiv);
   hideMessage(successDiv);
 
-  // ── Client-side validation ───────────────────────────────
+  // ── Honeypot Bot Trap Check ───────────────────────────────
+  const honeypot = document.getElementById('register-hp')?.value || '';
+  if (honeypot.trim().length > 0) {
+    console.warn('[Beard Banna Security] Automated bot registration rejected via honeypot.');
+    setLoading(submitBtn, 'Creating Account...');
+    setTimeout(() => {
+      resetLoading(submitBtn, 'Sign Up');
+      showSuccess(successDiv, '🎉 Account created! Please check your email.');
+    }, 1200);
+    return;
+  }
 
+  // ── Form Velocity Protection (Humans take >1.2s to fill) ───
+  if (Date.now() - registerFormLoadedAt < 1200) {
+    showError(errorDiv, 'Please complete all required fields carefully before submitting.');
+    return;
+  }
+
+  // ── Client-side Cooldown / Rate Limiting (5s) ─────────────
+  const now = Date.now();
+  if (now - lastRegisterAttempt < 5000) {
+    showError(errorDiv, 'Please wait a moment before trying again.');
+    return;
+  }
+  lastRegisterAttempt = now;
+
+  const name = document.getElementById('register-name')?.value.trim() || '';
+  const email = document.getElementById('register-email')?.value.trim().toLowerCase() || '';
+  const phone = document.getElementById('register-phone')?.value.trim() || '';
+  const password = document.getElementById('register-password')?.value || '';
+  const confirmPassword = document.getElementById('confirm-password')?.value || '';
+
+  // ── Length & Format Validation ───────────────────────────
   if (!name || !email || !password) {
     showError(errorDiv, 'Please fill in all required fields.');
     return;
   }
 
-  if (name.trim().length < 2) {
-    showError(errorDiv, 'Please enter your full name (at least 2 characters).');
+  if (name.length < 2 || name.length > 80) {
+    showError(errorDiv, 'Please enter a valid full name (2 to 80 characters).');
     return;
   }
 
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    showError(errorDiv, 'Please enter a valid email address.');
+  if (!emailRegex.test(email) || email.length > 100) {
+    showError(errorDiv, 'Please enter a valid email address (max 100 characters).');
     return;
   }
 
-  if (phone && !/^[+]?[\d\s\-]{6,15}$/.test(phone)) {
-    showError(errorDiv, 'Please enter a valid phone number.');
+  if (phone && !/^[+]?[\d\s\-]{6,16}$/.test(phone)) {
+    showError(errorDiv, 'Please enter a valid phone number (up to 16 digits).');
     return;
   }
 
-  if (password.length < 6) {
-    showError(errorDiv, 'Please choose a stronger password (minimum 6 characters).');
+  if (password.length < 6 || password.length > 64) {
+    showError(errorDiv, 'Password must be between 6 and 64 characters.');
     return;
   }
 
@@ -102,15 +132,15 @@ async function handleRegister() {
     return;
   }
 
+  // ── Analytics Event Tracking (No sensitive data sent) ─────
+  if (typeof window.trackGAEvent === 'function') {
+    window.trackGAEvent('sign_up', { method: 'email' });
+  }
+
   // ── Handle Email Confirmation Required ───────────────────
   if (result.needsEmailConfirmation) {
-    showSuccess(successDiv,
-      `🎉 Account created! We've sent a verification email to <strong>${email}</strong>.<br>
-       Please check your inbox (and spam folder) and click the verification link before signing in.`
-    );
-    // Clear form
-    const form = document.getElementById('register-form');
-    if (form) form.reset();
+    // Redirect to dedicated Thank You confirmation page
+    window.location.href = `thank-you.html?type=account&email=${encodeURIComponent(email)}`;
     return;
   }
 
@@ -132,15 +162,13 @@ async function handleRegister() {
     }
 
     setTimeout(() => {
-      window.location.href = 'index.html';
-    }, 1000);
+      window.location.href = `thank-you.html?type=account&ref=welcome`;
+    }, 800);
     return;
   }
 
-  // ── Fallback: show success message ───────────────────────
-  showSuccess(successDiv,
-    `🎉 Account created! Please check your email at <strong>${email}</strong> to verify your account.`
-  );
+  // ── Fallback ─────────────────────────────────────────────
+  window.location.href = `thank-you.html?type=account&email=${encodeURIComponent(email)}`;
 }
 
 // ── Utility helpers ───────────────────────────────────────

@@ -4,7 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Checkout | BEARD BANNA</title>
+    <title>Secure Checkout | BEARD BANNA — Royal Heritage Apparel</title>
+    <meta name="description" content="Complete your BEARD BANNA order with secure payment options including UPI, Cards, Net Banking, and Cash on Delivery with Pan-India delivery.">
+    <meta name="robots" content="noindex, nofollow">
 
     <!-- Google Fonts for Classic & Royal Typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -18,7 +20,9 @@
 <body>
 
     <header>
-        <img src="images/Logo-removebg-preview.png" alt="Beard Banna Logo" class="logo">
+        <a href="index.html" style="text-decoration:none;">
+            <img src="images/Logo-removebg-preview.png" alt="Beard Banna Royal Rajputana Logo" class="logo">
+        </a>
         <p>HONOR • HISTORY • HERITAGE</p>
     </header>
 
@@ -34,24 +38,30 @@
             <!-- Delivery Details -->
             <div class="checkout-form">
                 <h2>Delivery & Tax Details</h2>
-                <form id="checkout-form">
-                    <label>Full Name <span class="required">*</span></label>
-                    <input type="text" id="name" placeholder="Full Name" required>
+                <form id="checkout-form" autocomplete="on">
+                    <!-- Anti-spam bot trap (honeypot) -->
+                    <div style="opacity: 0; position: absolute; top: 0; left: 0; height: 0; width: 0; z-index: -1; overflow: hidden;" aria-hidden="true">
+                        <label for="checkout-hp">Royal Verification</label>
+                        <input type="text" id="checkout-hp" name="checkout_bot_trap" tabindex="-1" autocomplete="off">
+                    </div>
 
-                    <label>Email Address <span class="required">*</span></label>
-                    <input type="email" id="email" placeholder="Email Address" required>
+                    <label for="name">Full Name <span class="required">*</span></label>
+                    <input type="text" id="name" placeholder="Full Name" required maxlength="80" autocomplete="name">
 
-                    <label>Phone Number <span class="required">*</span></label>
-                    <input type="tel" id="phone" placeholder="Phone Number" required>
+                    <label for="email">Email Address <span class="required">*</span></label>
+                    <input type="email" id="email" placeholder="Email Address" required maxlength="100" autocomplete="email">
 
-                    <label>Full Address <span class="required">*</span></label>
-                    <textarea id="address" placeholder="Full Address" required></textarea>
+                    <label for="phone">Phone Number <span class="required">*</span></label>
+                    <input type="tel" id="phone" placeholder="10-digit Phone Number" required maxlength="15" autocomplete="tel">
 
-                    <label>City <span class="required">*</span></label>
-                    <input type="text" id="city" placeholder="City" required>
+                    <label for="address">Full Address <span class="required">*</span></label>
+                    <textarea id="address" placeholder="House / Flat No., Landmark, Area" required maxlength="300" autocomplete="street-address"></textarea>
 
-                    <label>State <span class="required">*</span></label>
-                    <select id="state" required onchange="calculateOrderGST()">
+                    <label for="city">City <span class="required">*</span></label>
+                    <input type="text" id="city" placeholder="City" required maxlength="60" autocomplete="address-level2">
+
+                    <label for="state">State <span class="required">*</span></label>
+                    <select id="state" required onchange="calculateOrderGST()" autocomplete="address-level1">
                         <option value="">Select State</option>
                         <option value="Rajasthan">Rajasthan (State 08 - Intra-State CGST+SGST)</option>
                         <option value="Delhi">Delhi (Inter-State IGST)</option>
@@ -73,8 +83,8 @@
                         <option value="Other State">Other State / Union Territory</option>
                     </select>
 
-                    <label>Pincode <span class="required">*</span></label>
-                    <input type="text" id="pincode" placeholder="Pincode" required>
+                    <label for="pincode">Pincode <span class="required">*</span></label>
+                    <input type="text" id="pincode" placeholder="6-digit PIN code" required maxlength="6" autocomplete="postal-code">
 
                     <h2>Select Payment Method</h2>
                     <div class="payment-options">
@@ -132,9 +142,21 @@
     </section>
 
     <footer>
-        <p style="margin: 0; padding: 10px 0;"><a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.2rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed & Maintained by Himanshu ↗</a></p>
+        <p style="margin: 0 0 8px 0; font-size: 0.95rem; color: #94a3b8;">&copy; 2026 <b>BEARD BANNA</b>. All Rights Reserved. HONOR • HISTORY • HERITAGE</p>
+        <p style="margin: 0 0 10px 0; font-size: 0.88rem;">
+            <a href="index.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Home</a> |
+            <a href="collection.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Collection</a> |
+            <a href="track-order.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Track Order</a> |
+            <a href="privacy.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Privacy Policy</a> |
+            <a href="javascript:void(0)" onclick="if(window.openCookiePreferences) window.openCookiePreferences();" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Cookie Choices</a>
+        </p>
+        <p style="margin: 0; padding: 6px 0;">
+            <a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.15rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed &amp; Maintained by Himanshu ↗</a>
+        </p>
     </footer>
 
+    <!-- Google Analytics 4 & Cookie Consent -->
+    <script src="js/analytics-consent.js"></script>
     <script src="js/api.js"></script>
     <script src="js/gst.js"></script>
     <!-- Supabase Auth — must load before checkout.js for auth guard -->

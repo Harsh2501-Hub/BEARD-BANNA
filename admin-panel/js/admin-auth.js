@@ -1,39 +1,10 @@
-   // ===============================
-// ADMIN AUTH — SUPABASE-INTEGRATED SECURE AUTH
-// ===============================
-//
-// SECURITY MODEL:
-// ──────────────────────────────────────────────────────────────────
-// Admin authorization is enforced at TWO layers:
-//
-//   1. LOCAL CREDENTIAL CHECK (primary UX gate):
-//      The admin login form validates against known admin credentials.
-//      This is a fast first gate to prevent unauthorized UI access.
-//
-//   2. SUPABASE AUTH (database security layer):
-//      After local credential validation, the admin is ALSO signed into
-//      Supabase using the admin's actual Supabase account credentials.
-//      This gives the admin a real Supabase session, which:
-//        - Makes auth.uid() resolve to the admin's UUID
-//        - Makes is_admin() return true in RLS policies
-//        - Allows SELECT on all orders, profiles, etc.
-//
-//   REQUIRED SETUP (one-time, in Supabase Dashboard):
-//     1. Ensure beardbanna07773@gmail.com exists in Supabase Auth → Users
-//        If not, create it there with a secure password.
-//     2. Run in SQL Editor:
-//        UPDATE public.profiles SET role = 'admin'
-//        WHERE email = 'beardbanna07773@gmail.com';
-//     3. Set ADMIN_SUPABASE_PASSWORD below to that password.
-// ──────────────────────────────────────────────────────────────────
+// =========================================================
+// BEARD BANNA — HARDENED ADMIN AUTHENTICATION
+// Secure Supabase Authentication & Role Verification
+// ZERO Hardcoded Passwords
+// =========================================================
 
-// ─── CONFIGURE THESE (one-time admin Supabase credentials) ────────────────
-const ADMIN_SUPABASE_EMAIL = 'beardbanna07773@gmail.com';
-// Set this to the actual Supabase password for the admin account.
-// This is the admin@supabase password, NOT the app login password.
-// It is stored here because the admin panel is a private tool, not customer-facing.
-const ADMIN_SUPABASE_PASSWORD = 'Banna@7773'; // Admin Supabase account password
-// ─────────────────────────────────────────────────────────────────────────
+const PRIMARY_ADMIN_EMAIL = 'beardbanna07773@gmail.com';
 
 function isCurrentPageLogin() {
   const p = window.location.pathname.toLowerCase();
@@ -57,53 +28,47 @@ function saveAdminSession(token) {
 function clearAdminSession() {
   localStorage.removeItem('adminToken');
   localStorage.removeItem('adminLoggedIn');
+  localStorage.removeItem('adminEmail');
 }
 
 /**
- * Signs the admin into Supabase so RLS policies (is_admin()) work.
- * This is SILENT — the admin already authenticated via local credentials.
- * Returns true on success, false if Supabase auth fails (non-fatal).
+ * Validates that an authenticated Supabase user possesses the 'admin' role.
  */
-async function signAdminIntoSupabase() {
-  if (!window.supabaseClient) {
-    console.warn('[Admin Auth] Supabase client not available — orders may be limited by RLS.');
-    return false;
-  }
+async function verifyAdminRole(user) {
+  if (!user) return false;
 
-  // Check if already signed into Supabase as admin
-  try {
-    const { data: { session } } = await window.supabaseClient.auth.getSession();
-    if (session?.user?.email === ADMIN_SUPABASE_EMAIL) {
-      console.log('[Admin Auth] ✅ Already signed into Supabase as admin.');
-      return true;
-    }
-  } catch (e) {}
-
-  // Sign into Supabase with admin credentials
-  try {
-    const { data, error } = await window.supabaseClient.auth.signInWithPassword({
-      email: ADMIN_SUPABASE_EMAIL,
-      password: ADMIN_SUPABASE_PASSWORD
-    });
-
-    if (error) {
-      console.warn('[Admin Auth] ⚠️ Supabase admin sign-in failed:', error.message);
-      console.warn('[Admin Auth] Orders may show limited results due to RLS.');
-      console.warn('[Admin Auth] Fix: Set password for', ADMIN_SUPABASE_EMAIL, 'in Supabase Auth → Users,');
-      console.warn('[Admin Auth] then update ADMIN_SUPABASE_PASSWORD in admin-auth.js');
-      return false;
-    }
-
-    console.log('[Admin Auth] ✅ Signed into Supabase as admin:', data.user?.email);
+  // Primary brand administrator email
+  if (user.email && user.email.toLowerCase() === PRIMARY_ADMIN_EMAIL.toLowerCase()) {
     return true;
-  } catch (e) {
-    console.warn('[Admin Auth] Supabase sign-in exception:', e.message);
-    return false;
   }
+
+  // Check user metadata
+  if (user.user_metadata?.role === 'admin') {
+    return true;
+  }
+
+  // Check database public.profiles table
+  if (window.supabaseClient) {
+    try {
+      const { data, error } = await window.supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (!error && data && data.role === 'admin') {
+        return true;
+      }
+    } catch (e) {
+      console.warn('[Admin Auth] Profile role check error:', e.message);
+    }
+  }
+
+  return false;
 }
 
+// ── ADMIN LOGIN FORM HANDLER ──────────────────────────────
 const loginForm = document.getElementById('admin-login-form');
-
 if (loginForm) {
   loginForm.addEventListener('submit', loginAdmin);
 }
@@ -115,116 +80,188 @@ async function loginAdmin(e) {
   const passwordInput = document.getElementById('admin-password');
   const submitBtn = loginForm ? loginForm.querySelector('button[type="submit"]') : null;
 
-  const inputVal = usernameInput ? usernameInput.value.trim() : '';
-  const password = passwordInput ? passwordInput.value.trim() : '';
-  const userLower = inputVal.toLowerCase();
+  const rawInput = usernameInput ? usernameInput.value.trim() : '';
+  const password = passwordInput ? passwordInput.value : '';
 
-  if (!inputVal || !password) {
-    if (typeof showToast === 'function') showToast('Please enter username and password');
-    else alert('Please enter username and password');
+  if (!rawInput || !password) {
+    showAuthNotice('Please enter your admin credentials');
     return;
+  }
+
+  // Resolve input to email address
+  let email = rawInput.toLowerCase();
+  if (!email.includes('@')) {
+    if (email === 'beardbanna' || email === 'admin') {
+      email = PRIMARY_ADMIN_EMAIL;
+    } else {
+      email = email + '@beard-banna.com';
+    }
   }
 
   if (submitBtn) {
     submitBtn.disabled = true;
-    submitBtn.innerText = 'Signing In...';
+    submitBtn.innerText = 'Verifying Credentials...';
   }
 
-  // Valid admin usernames and passwords (mobile auto-capitalization resilient)
-  const validAdmins = ['beardbanna', 'admin', 'beardbanna07773@gmail.com', 'admin@clothing.com'];
-  const validPasswords = [ADMIN_SUPABASE_PASSWORD, 'Banna@7773', 'banna@7773', 'AdminPass123!', 'adminpass123!', 'admin', 'Admin', 'admin123', 'Admin123', 'beardbanna'];
+  // ── Primary Gate: Authenticate directly against Supabase Auth ──
+  if (window.supabaseClient) {
+    try {
+      const { data, error } = await window.supabaseClient.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
 
-  const isLocalMatch = validAdmins.includes(userLower) && validPasswords.includes(password);
+      if (!error && data?.user) {
+        // Enforce RBAC (Role-Based Access Control)
+        const hasAdminRole = await verifyAdminRole(data.user);
 
-  if (isLocalMatch) {
-    // ── Step 1: Save local admin session ──
-    const adminToken = 'bb_admin_tok_' + btoa(JSON.stringify({ user: userLower, role: 'admin', ts: Date.now() }));
-    saveAdminSession(adminToken);
+        if (!hasAdminRole) {
+          await window.supabaseClient.auth.signOut();
+          clearAdminSession();
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerText = 'Login';
+          }
+          showAuthNotice('❌ Access Denied: This account lacks administrator privileges.');
+          return;
+        }
 
-    // ── Step 2: Sign into Supabase so RLS is_admin() works ──
-    if (submitBtn) submitBtn.innerText = 'Connecting to database...';
-    await signAdminIntoSupabase();
+        // ── MFA (Multi-Factor Authentication) Verification Gate ──
+        try {
+          const { data: aalData, error: aalErr } = await window.supabaseClient.auth.mfa.getAuthenticatorAssuranceLevel();
+          if (!aalErr && aalData?.nextLevel === 'aal2' && aalData?.currentLevel === 'aal1') {
+            const factors = await window.supabaseClient.auth.mfa.listFactors();
+            const totpFactor = factors.data?.totp?.[0];
+            if (totpFactor) {
+              const code = prompt('🔐 Two-Factor Authentication Required\nEnter your 6-digit Authenticator TOTP code:');
+              if (!code || !code.trim()) {
+                await window.supabaseClient.auth.signOut();
+                clearAdminSession();
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Login'; }
+                showAuthNotice('❌ MFA verification is required for this administrator account.');
+                return;
+              }
 
-    if (typeof showToast === 'function') showToast('✅ Login Successful');
-    setTimeout(() => {
-      window.location.href = '/admin-panel/dashboard.html';
-    }, 400);
+              const { data: mfaVerifyData, error: mfaVerifyErr } = await window.supabaseClient.auth.mfa.challengeAndVerify({
+                factorId: totpFactor.id,
+                code: code.trim()
+              });
+
+              if (mfaVerifyErr) {
+                await window.supabaseClient.auth.signOut();
+                clearAdminSession();
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerText = 'Login'; }
+                showAuthNotice('❌ Invalid 6-digit MFA code. Verification failed.');
+                return;
+              }
+            }
+          }
+        } catch (mfaEx) {
+          console.warn('[Admin Auth] MFA challenge notice:', mfaEx.message);
+        }
+
+        // Admin verified (password + optional MFA)
+        saveAdminSession(data.session?.access_token || 'bb_auth_valid');
+        localStorage.setItem('adminEmail', data.user.email);
+
+        if (typeof showToast === 'function') showToast('👑 Royal Admin Login Successful');
+        setTimeout(() => {
+          window.location.href = '/admin-panel/dashboard.html';
+        }, 350);
+        return;
+      }
+    } catch (err) {
+      console.warn('[Admin Auth] Supabase auth attempt exception:', err.message);
+    }
+  }
+
+  // ── Secondary Gate: Legacy backend REST API fallback ──
+  try {
+    if (typeof API !== 'undefined' && API.post) {
+      const res = await API.post('/auth/login', { email, password });
+      const token = res.data?.tokens?.accessToken || res.token || res.accessToken;
+      const user = res.data?.user || res.user;
+
+      if (res.success && token && user?.role === 'admin') {
+        saveAdminSession(token);
+        localStorage.setItem('adminEmail', email);
+        if (typeof showToast === 'function') showToast('👑 Admin Login Successful');
+        setTimeout(() => {
+          window.location.href = '/admin-panel/dashboard.html';
+        }, 350);
+        return;
+      }
+    }
+  } catch (apiErr) {
+    console.warn('[Admin Auth] REST API fallback error:', apiErr.message);
+  }
+
+  // Failed login
+  if (submitBtn) {
+    submitBtn.disabled = false;
+    submitBtn.innerText = 'Login';
+  }
+  showAuthNotice('❌ Invalid Administrator Username or Password');
+}
+
+function showAuthNotice(msg) {
+  if (typeof showToast === 'function') {
+    showToast(msg);
+  } else {
+    alert(msg);
+  }
+}
+
+// ── SESSION GUARD FOR PROTECTED ADMIN PAGES ────────────────
+async function verifyAdminPageAccess() {
+  if (isCurrentPageLogin()) {
+    // If on login page and already authenticated, forward to dashboard
+    if (isAdminLoggedIn() && window.supabaseClient) {
+      try {
+        const { data: { session } } = await window.supabaseClient.auth.getSession();
+        if (session?.user) {
+          const hasAdmin = await verifyAdminRole(session.user);
+          if (hasAdmin) {
+            window.location.href = '/admin-panel/dashboard.html';
+          }
+        }
+      } catch (e) {}
+    }
     return;
   }
 
-  // ── Fallback: try backend REST API auth ──
-  const email = inputVal.includes('@') ? inputVal : (userLower === 'beardbanna' ? ADMIN_SUPABASE_EMAIL : (userLower === 'admin' ? 'admin@clothing.com' : inputVal));
-
-  try {
-    const res = await API.post('/auth/login', { email, password });
-    const token = res.data?.tokens?.accessToken || res.token || res.accessToken;
-    const user = res.data?.user || res.user;
-
-    if (res.success && token && user?.role === 'admin') {
-      saveAdminSession(token);
-      await signAdminIntoSupabase();
-      if (typeof showToast === 'function') showToast('✅ Login Successful');
-      setTimeout(() => {
-        window.location.href = '/admin-panel/dashboard.html';
-      }, 400);
-      return;
-    }
-
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerText = 'Login';
-    }
-    if (typeof showToast === 'function') showToast('❌ Invalid Username or Password');
-    else alert('❌ Invalid Username or Password');
-
-  } catch (err) {
-    if (submitBtn) {
-      submitBtn.disabled = false;
-      submitBtn.innerText = 'Login';
-    }
-    if (typeof showToast === 'function') showToast('❌ Invalid Username or Password');
-    else alert('❌ Invalid Username or Password');
-  }
-}
-
-// On protected admin pages: ensure Supabase admin session is active
-async function ensureAdminSupabaseSession() {
-  if (!isCurrentPageLogin() && isAdminLoggedIn()) {
-    // Admin is logged in locally — ensure Supabase session is also active
-    await signAdminIntoSupabase();
-  }
-}
-
-// Redirect authenticated admins away from the login page to the dashboard
-if (isCurrentPageLogin() && isAdminLoggedIn()) {
-  // Restore Supabase session silently then redirect
-  signAdminIntoSupabase().then(() => {
-    setTimeout(() => {
-      window.location.href = '/admin-panel/dashboard.html';
-    }, 300);
-  });
-}
-
-// Redirect unauthenticated users to login ONLY on protected admin pages
-if (!isCurrentPageLogin() && !isAdminLoggedIn()) {
-  setTimeout(() => {
+  // On protected admin pages:
+  if (!isAdminLoggedIn()) {
     window.location.href = '/admin-panel/login.html';
-  }, 300);
-} else if (!isCurrentPageLogin() && isAdminLoggedIn()) {
-  // Silently restore Supabase session on every protected page load
-  // This ensures RLS is_admin() works after page refresh
-  document.addEventListener('DOMContentLoaded', ensureAdminSupabaseSession);
+    return;
+  }
+
+  // Double-check live Supabase session
+  if (window.supabaseClient) {
+    try {
+      const { data: { session } } = await window.supabaseClient.auth.getSession();
+      if (!session || !session.user) {
+        console.warn('[Admin Auth] No active Supabase session found. Redirecting to login.');
+        clearAdminSession();
+        window.location.href = '/admin-panel/login.html';
+        return;
+      }
+      const hasAdmin = await verifyAdminRole(session.user);
+      if (!hasAdmin) {
+        console.warn('[Admin Auth] User session is not an administrator.');
+        clearAdminSession();
+        window.location.href = '/admin-panel/login.html';
+      }
+    } catch (e) {}
+  }
 }
 
-const logoutBtn = document.getElementById('logout-btn');
-if (logoutBtn) {
-  logoutBtn.addEventListener('click', logoutAdmin);
-}
+document.addEventListener('DOMContentLoaded', verifyAdminPageAccess);
 
+// ── LOGOUT HANDLER ─────────────────────────────────────────
 async function logoutAdmin() {
   clearAdminSession();
 
-  // Also sign out of Supabase
   if (window.supabaseClient) {
     try {
       await window.supabaseClient.auth.signOut();
@@ -237,5 +274,39 @@ async function logoutAdmin() {
   }, 400);
 }
 
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', logoutAdmin);
+}
+
 window.logoutAdmin = logoutAdmin;
-window.signAdminIntoSupabase = signAdminIntoSupabase;
+window.isAdminLoggedIn = isAdminLoggedIn;
+
+// ── ADMIN MFA ENROLLMENT & MANAGEMENT HELPERS ─────────────
+async function checkAdminMFAStatus() {
+  if (!window.supabaseClient) return { enrolled: false };
+  try {
+    const factors = await window.supabaseClient.auth.mfa.listFactors();
+    const totpFactor = factors.data?.totp?.[0];
+    return {
+      enrolled: !!totpFactor && totpFactor.status === 'verified',
+      factorId: totpFactor?.id || null
+    };
+  } catch (e) {
+    return { enrolled: false };
+  }
+}
+
+async function enrollAdminTOTP() {
+  if (!window.supabaseClient) throw new Error('Supabase client unavailable');
+  const { data, error } = await window.supabaseClient.auth.mfa.enroll({
+    factorType: 'totp',
+    issuer: 'BEARD BANNA Admin',
+    friendlyName: 'Admin Authenticator'
+  });
+  if (error) throw error;
+  return data;
+}
+
+window.checkAdminMFAStatus = checkAdminMFAStatus;
+window.enrollAdminTOTP = enrollAdminTOTP;

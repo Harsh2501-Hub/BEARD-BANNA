@@ -1,0 +1,47 @@
+# ==============================================================================
+# BEARD BANNA — SEARCH ENGINE CRAWLER DIRECTIVES
+# Website: https://beard-banna.vercel.app/
+# Tagline: HONOR • HISTORY • HERITAGE
+# ==============================================================================
+
+User-agent: *
+Allow: /
+Allow: /collection
+Allow: /product
+Allow: /track-order
+Allow: /creator
+Allow: /privacy
+Allow: /css/
+Allow: /js/
+Allow: /images/
+
+# ── Disallow Administrative & Backend Management ──────────────
+Disallow: /admin
+Disallow: /admin/
+Disallow: /admin-panel/
+Disallow: /admin-panel/*
+Disallow: /api/
+
+# ── Disallow Private Checkout & Account Portals ───────────────
+Disallow: /checkout
+Disallow: /checkout.html
+Disallow: /order-success
+Disallow: /order-success.html
+Disallow: /thank-you
+Disallow: /thank-you.html
+Disallow: /cart
+Disallow: /cart.html
+Disallow: /profile
+Disallow: /profile.html
+Disallow: /account
+Disallow: /login
+Disallow: /login.html
+Disallow: /register
+Disallow: /register.html
+Disallow: /forgot-password
+Disallow: /forgot-password.html
+Disallow: /reset-password
+Disallow: /reset-password.html
+
+# ── XML Sitemap Authority ─────────────────────────────────────
+Sitemap: https://beard-banna.vercel.app/sitemap.xml

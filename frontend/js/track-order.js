@@ -309,27 +309,27 @@ function renderOrderInfo() {
   const trackingNumber = document.getElementById("tracking-number");
 
   const orderIdVal = currentOrder.orderId || currentOrder.id || "#1001";
-  if (trackOrderId) trackOrderId.innerHTML = orderIdVal;
-  if (trackOrderDate) trackOrderDate.innerHTML = new Date(currentOrder.orderDate || Date.now()).toLocaleDateString("en-IN");
+  if (trackOrderId) trackOrderId.textContent = orderIdVal;
+  if (trackOrderDate) trackOrderDate.textContent = new Date(currentOrder.orderDate || Date.now()).toLocaleDateString("en-IN");
 
   const delivery = new Date(currentOrder.orderDate || Date.now());
   delivery.setDate(delivery.getDate() + 5);
-  if (trackDeliveryDate) trackDeliveryDate.innerHTML = delivery.toLocaleDateString("en-IN");
+  if (trackDeliveryDate) trackDeliveryDate.textContent = delivery.toLocaleDateString("en-IN");
 
   const custObj = currentOrder.customer || {};
-  if (customerName) customerName.innerHTML = custObj.name || currentOrder.customer || "Customer";
-  if (customerEmail) customerEmail.innerHTML = custObj.email || currentOrder.email || "";
-  if (customerPhone) customerPhone.innerHTML = custObj.phone || currentOrder.phone || "N/A";
+  if (customerName) customerName.textContent = custObj.name || (typeof currentOrder.customer === 'string' ? currentOrder.customer : "Customer");
+  if (customerEmail) customerEmail.textContent = custObj.email || currentOrder.email || "";
+  if (customerPhone) customerPhone.textContent = custObj.phone || currentOrder.phone || "N/A";
 
   if (customerAddress) {
     if (currentOrder.address) {
-      customerAddress.innerHTML = currentOrder.address;
+      customerAddress.textContent = currentOrder.address;
     } else {
-      customerAddress.innerHTML = [custObj.address, custObj.city, custObj.state, custObj.pincode].filter(Boolean).join(', ');
+      customerAddress.textContent = [custObj.address, custObj.city, custObj.state, custObj.pincode].filter(Boolean).join(', ');
     }
   }
 
-  if (trackingNumber) trackingNumber.innerHTML = "BBX" + String(orderIdVal).replace(/[^0-9]/g, "");
+  if (trackingNumber) trackingNumber.textContent = "BBX" + String(orderIdVal).replace(/[^0-9]/g, "");
 }
 
 function getStageFromStatus(statusStr) {

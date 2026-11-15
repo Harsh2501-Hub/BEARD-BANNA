@@ -38,9 +38,9 @@ function displayProducts(productArray) {
 
     card.innerHTML = `
       <div class="card-img-container" style="position:relative; overflow:hidden; border-radius:8px; cursor:pointer;" onclick="window.location.href='product.html?id=${product.id}'">
-        <img src="${frontImg}" class="card-img-front" alt="${product.name}" onerror="this.onerror=null; this.src='images/Product 1.jpeg';" style="width:100%; height:320px; object-fit:cover; transition:transform 0.4s ease, opacity 0.3s ease;">
+        <img src="${frontImg}" class="card-img-front" alt="${product.name} — Front View Rajputana Apparel" loading="lazy" onerror="this.onerror=null; this.src='images/Product 1.jpeg';" style="width:100%; height:320px; object-fit:cover; transition:transform 0.4s ease, opacity 0.3s ease;">
         ${backImg !== frontImg ? `
-          <img src="${backImg}" class="card-img-back" alt="${product.name} Back" onerror="this.onerror=null; this.src='${frontImg}';" style="position:absolute; top:0; left:0; width:100%; height:320px; object-fit:cover; opacity:0; transition:opacity 0.4s ease, transform 0.4s ease;">
+          <img src="${backImg}" class="card-img-back" alt="${product.name} — Back View Rajputana Apparel" loading="lazy" onerror="this.onerror=null; this.src='${frontImg}';" style="position:absolute; top:0; left:0; width:100%; height:320px; object-fit:cover; opacity:0; transition:opacity 0.4s ease, transform 0.4s ease;">
         ` : ''}
         <span class="concept-preview-badge">CONCEPT PREVIEW</span>
         <span class="view-angle-badge" style="position:absolute; top:8px; right:8px; background:rgba(15, 23, 42, 0.75); color:#fbbf24; font-size:0.7rem; font-weight:700; padding:3px 8px; border-radius:12px; backdrop-filter:blur(4px);">
@@ -89,14 +89,25 @@ function displayProducts(productArray) {
 }
 
 async function initCollection() {
+  let loadedProducts = products;
   if (typeof fetchProductsFromAPI === "function") {
-    const loadedProducts = await fetchProductsFromAPI();
-    displayProducts(loadedProducts);
-  } else {
-    displayProducts(products);
+    loadedProducts = await fetchProductsFromAPI();
+  }
+  displayProducts(loadedProducts);
+
+  if (typeof window.trackGAEvent === 'function' && Array.isArray(loadedProducts)) {
+    window.trackGAEvent('view_item_list', {
+      item_list_name: 'Heritage Collection',
+      items: loadedProducts.map(p => ({
+        item_id: String(p.id),
+        item_name: p.name,
+        price: p.price
+      }))
+    });
   }
 }
 
+let searchDebounceTimer = null;
 if (searchInput) {
   searchInput.addEventListener("input", function () {
     const keyword = this.value.toLowerCase().trim();
@@ -114,6 +125,16 @@ if (searchInput) {
     });
 
     displayProducts(filteredProducts);
+
+    // Track search event with 600ms debounce
+    clearTimeout(searchDebounceTimer);
+    if (keyword.length >= 2) {
+      searchDebounceTimer = setTimeout(() => {
+        if (typeof window.trackGAEvent === 'function') {
+          window.trackGAEvent('search', { search_term: keyword });
+        }
+      }, 600);
+    }
   });
 }
 

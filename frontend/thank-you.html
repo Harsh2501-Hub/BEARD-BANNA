@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thank You | BEARD BANNA — Honor • History • Heritage</title>
+    <meta name="description" content="Thank you for your submission to the House of BEARD BANNA. Your request has been received with royal honor.">
+    <meta name="robots" content="noindex, nofollow">
+
+    <!-- Google Fonts for Classic & Royal Typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=Playfair+Display:ital,wght@0,600;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/auth.css">
+
+    <style>
+        .thankyou-wrapper {
+            min-height: 75vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            text-align: center;
+        }
+
+        .thankyou-card {
+            background: rgba(15, 23, 42, 0.88);
+            border: 2px solid rgba(251, 191, 36, 0.35);
+            border-radius: 16px;
+            padding: 48px 32px;
+            max-width: 660px;
+            width: 100%;
+            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.6), 0 0 30px rgba(251, 191, 36, 0.15);
+            backdrop-filter: blur(10px);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .thankyou-card::before {
+            content: "";
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, transparent, #fbbf24, #d4af37, #fbbf24, transparent);
+        }
+
+        .thankyou-icon {
+            font-size: 3.5rem;
+            margin-bottom: 12px;
+            display: inline-block;
+            filter: drop-shadow(0 0 15px rgba(251, 191, 36, 0.4));
+        }
+
+        .thankyou-badge {
+            display: inline-block;
+            color: #fbbf24;
+            font-family: 'Cinzel', serif;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+            background: rgba(251, 191, 36, 0.1);
+            border: 1px solid rgba(251, 191, 36, 0.3);
+            padding: 6px 18px;
+            border-radius: 20px;
+            margin-bottom: 18px;
+        }
+
+        .thankyou-title {
+            font-family: 'Cinzel', serif;
+            font-size: 2rem;
+            color: #f8fafc;
+            margin: 10px 0 12px 0;
+            font-weight: 700;
+        }
+
+        .thankyou-desc {
+            color: #cbd5e1;
+            font-size: 1.05rem;
+            line-height: 1.6;
+            margin-bottom: 25px;
+            max-width: 520px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .thankyou-ref-box {
+            background: rgba(30, 41, 59, 0.8);
+            border: 1px dashed rgba(251, 191, 36, 0.5);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin: 0 auto 30px auto;
+            max-width: 440px;
+        }
+
+        .thankyou-ref-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .thankyou-ref-value {
+            color: #fbbf24;
+            font-family: 'Cinzel', serif;
+            font-size: 1.35rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+        }
+
+        .thankyou-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+        }
+
+        .btn-gold {
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            color: #0f172a;
+            font-weight: 700;
+            padding: 12px 28px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(251, 191, 36, 0.35);
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-gold:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(251, 191, 36, 0.55);
+            background: linear-gradient(135deg, #fcd34d 0%, #b45309 100%);
+        }
+
+        .btn-outline {
+            background: rgba(30, 41, 59, 0.8);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            font-weight: 600;
+            padding: 12px 24px;
+            border-radius: 30px;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-outline:hover {
+            background: rgba(51, 65, 85, 0.9);
+            border-color: #fbbf24;
+            color: #fef08a;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <a href="index.html" style="text-decoration:none;">
+            <img src="images/Logo-removebg-preview.png" alt="Beard Banna Royal Rajputana Logo" class="logo">
+        </a>
+        <p class="header-tagline">Honor <span class="sep" aria-hidden="true">•</span> History <span class="sep" aria-hidden="true">•</span> Heritage</p>
+    </header>
+
+    <nav>
+        <a href="index.html">Home</a>
+        <a href="collection.html">Collection</a>
+        <a href="wishlist.html">❤️ Wishlist</a>
+        <a href="cart.html">🛒 Cart</a>
+        <a href="track-order.html">📦 Track Order</a>
+    </nav>
+
+    <main class="thankyou-wrapper">
+        <div class="thankyou-card">
+            <div class="thankyou-icon">👑</div>
+            <div class="thankyou-badge" id="ty-badge">HONOR & RESPECT</div>
+            <h1 class="thankyou-title" id="ty-title">Submission Received</h1>
+            <div class="gold-divider" style="margin: 15px auto;"><span>⚜</span></div>
+
+            <p class="thankyou-desc" id="ty-desc">
+                Your message has been delivered to the House of BEARD BANNA. 
+                Our Royal Support team will inspect your inquiry with utmost care and respond to you promptly.
+            </p>
+
+            <div class="thankyou-ref-box" id="ty-ref-box" style="display:none;">
+                <div class="thankyou-ref-label">Reference Number</div>
+                <div class="thankyou-ref-value" id="ty-ref-val">—</div>
+            </div>
+
+            <div class="thankyou-actions">
+                <a href="collection.html" class="btn-gold">
+                    <span>👕</span> Explore Royal Collection
+                </a>
+                <a href="index.html" class="btn-outline">
+                    <span>👑</span> Return to Homepage
+                </a>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p style="margin: 0 0 8px 0; font-size: 0.95rem; color: #94a3b8;">&copy; 2026 <b>BEARD BANNA</b>. All Rights Reserved. HONOR • HISTORY • HERITAGE</p>
+        <p style="margin: 0 0 10px 0; font-size: 0.88rem;">
+            <a href="index.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Home</a> |
+            <a href="collection.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Collection</a> |
+            <a href="track-order.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Track Order</a> |
+            <a href="privacy.html" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Privacy Policy</a> |
+            <a href="javascript:void(0)" onclick="if(window.openCookiePreferences) window.openCookiePreferences();" style="color:#fbbf24; text-decoration:none; margin:0 8px;">Cookie Choices</a>
+        </p>
+        <p style="margin: 0; padding: 6px 0;">
+            <a href="creator.html" style="color: #ffd700; text-decoration: none; font-weight: 800; font-size: 1.15rem; letter-spacing: 1px; text-shadow: 0 0 12px rgba(255, 215, 0, 0.4); transition: all 0.3s ease;">Developed &amp; Maintained by Himanshu ↗</a>
+        </p>
+    </footer>
+
+    <script src="js/analytics-consent.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const params = new URLSearchParams(window.location.search);
+            const ref = params.get('ref') || params.get('orderId') || '';
+            const type = params.get('type') || 'inquiry';
+
+            const badgeEl = document.getElementById('ty-badge');
+            const titleEl = document.getElementById('ty-title');
+            const descEl = document.getElementById('ty-desc');
+            const refBox = document.getElementById('ty-ref-box');
+            const refVal = document.getElementById('ty-ref-val');
+
+            if (type === 'inquiry' && ref) {
+                badgeEl.textContent = 'INQUIRY SUBMITTED WITH HONOR';
+                titleEl.textContent = 'Message Delivered to Royal Court';
+                descEl.textContent = 'Thank you for reaching out to BEARD BANNA. Your inquiry reference has been registered in our database. Our royal support team will contact you shortly.';
+                refBox.style.display = 'block';
+                refVal.textContent = ref;
+            } else if (type === 'account') {
+                badgeEl.textContent = 'ROYAL BROTHERHOOD';
+                titleEl.textContent = 'Account Created Successfully';
+                descEl.textContent = 'Welcome to the House of BEARD BANNA! Your customer portal is now active. Wear your legacy with pride.';
+            } else if (type === 'review') {
+                badgeEl.textContent = 'SCRIPTURES OF SATISFACTION';
+                titleEl.textContent = 'Review Submitted with Pride';
+                descEl.textContent = 'Thank you for sharing your experience with BEARD BANNA. Your feedback helps preserve our royal craftsmanship standard.';
+            }
+
+            // Track form completion in Google Analytics
+            if (window.trackGAEvent) {
+                window.trackGAEvent('form_submit', {
+                    form_type: type,
+                    reference_id: ref || 'unspecified'
+                });
+            }
+        });
+    </script>
+
+</body>
+
+</html>

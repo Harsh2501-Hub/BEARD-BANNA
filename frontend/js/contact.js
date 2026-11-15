@@ -1,35 +1,73 @@
 // ===============================
-// CONTACT INQUIRIES HANDLER - SUPABASE INTEGRATED
+// CONTACT INQUIRIES HANDLER - SUPABASE INTEGRATED & SPAM HARDENED
 // ===============================
 
 const contactForm = document.getElementById("royal-contact-form");
 
 if (contactForm) {
+  // Set form load timestamp for human-speed bot detection
+  const formTimeInput = document.getElementById("inquiry-form-time");
+  if (formTimeInput) formTimeInput.value = Date.now().toString();
+
   contactForm.addEventListener("submit", async function (e) {
     e.preventDefault();
+
+    // ── 1. HONEYPOT SPAM PROTECTION ──
+    const honeypotVal = document.getElementById("inquiry-hp")?.value;
+    if (honeypotVal) {
+      console.warn("[Spam Protection] Bot trap triggered. Submission dropped.");
+      window.location.href = "thank-you.html?ref=BOT-BLOCKED&type=inquiry";
+      return;
+    }
+
+    // ── 2. BOT VELOCITY CHECK (< 2 seconds) ──
+    const loadTime = Number(document.getElementById("inquiry-form-time")?.value || 0);
+    if (loadTime > 0 && Date.now() - loadTime < 2000) {
+      alert("Please take a moment before submitting your inquiry.");
+      return;
+    }
+
+    // ── 3. CLIENT-SIDE RATE LIMITING (30s cooldown) ──
+    const lastSubmitTime = Number(localStorage.getItem("bb_last_inquiry_ts") || 0);
+    const cooldownMs = 30000;
+    if (Date.now() - lastSubmitTime < cooldownMs) {
+      const waitSec = Math.ceil((cooldownMs - (Date.now() - lastSubmitTime)) / 1000);
+      alert(`⏳ Please wait ${waitSec} seconds before sending another inquiry to the Royal Court.`);
+      return;
+    }
 
     const submitBtn = contactForm.querySelector("button[type='submit']");
     const originalBtnText = submitBtn ? submitBtn.innerHTML : "✉ Send Royal Inquiry";
 
-    const name = document.getElementById("inquiry-name")?.value.trim();
-    const email = document.getElementById("inquiry-email")?.value.trim();
-    const phone = document.getElementById("inquiry-phone")?.value.trim();
-    const orderNumber = document.getElementById("inquiry-order")?.value.trim();
-    const subject = document.getElementById("inquiry-subject")?.value.trim();
-    const message = document.getElementById("inquiry-message")?.value.trim();
+    const name = (document.getElementById("inquiry-name")?.value || "").trim();
+    const email = (document.getElementById("inquiry-email")?.value || "").trim().toLowerCase();
+    const phone = (document.getElementById("inquiry-phone")?.value || "").trim();
+    const orderNumber = (document.getElementById("inquiry-order")?.value || "").trim();
+    const subject = (document.getElementById("inquiry-subject")?.value || "").trim();
+    const message = (document.getElementById("inquiry-message")?.value || "").trim();
 
     if (!name || !email || !phone || !subject || !message) {
       alert("Please fill in all required fields (*).");
       return;
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (name.length < 2 || name.length > 80) {
+      alert("Please enter a valid name (2 to 80 characters).");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 100) {
       alert("Please enter a valid email address.");
       return;
     }
 
     if (!/^[6-9]\d{9}$/.test(phone)) {
-      alert("Please enter a valid 10-digit Indian mobile number.");
+      alert("Please enter a valid 10-digit Indian mobile number (e.g. 9876543210).");
+      return;
+    }
+
+    if (message.length < 10 || message.length > 2000) {
+      alert("Please enter a detailed message between 10 and 2000 characters.");
       return;
     }
 
@@ -84,6 +122,9 @@ if (contactForm) {
         throw new Error("Unable to reach database");
       }
 
+      // Record successful submit timestamp for rate limiting
+      localStorage.setItem("bb_last_inquiry_ts", Date.now().toString());
+
       // Also cache in localStorage for fast local access
       try {
         const localObj = {
@@ -96,13 +137,28 @@ if (contactForm) {
         localStorage.setItem("inquiries", JSON.stringify(existingInquiries));
       } catch (e) {}
 
-      // Success UX
-      const msg = `👑 Inquiry Sent Successfully!\n\nReference ID: ${inqNumber}\nOur Royal Support Team will contact you at ${email} shortly.`;
-      if (typeof showToast === "function") {
-        showToast(`✅ Inquiry Sent! Reference: ${inqNumber}`);
+      // Track key event in Google Analytics 4
+      if (typeof window.trackGAEvent === "function") {
+        window.trackGAEvent("form_submit", {
+          form_name: "royal_contact_inquiry",
+          inquiry_id: inqNumber,
+          subject: subject
+        });
       }
-      alert(msg);
+
+      // Store in sessionStorage to verify on Thank-You page
+      try {
+        sessionStorage.setItem("bb_last_inquiry", JSON.stringify({
+          ref: inqNumber,
+          name: name,
+          email: email
+        }));
+      } catch (e) {}
+
       contactForm.reset();
+
+      // Redirect to dedicated /thank-you confirmation page
+      window.location.href = `thank-you.html?ref=${encodeURIComponent(inqNumber)}&type=inquiry`;
 
     } catch (err) {
       console.error("[Inquiry] Submission failed:", err);

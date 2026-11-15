@@ -67,12 +67,20 @@ document.addEventListener('DOMContentLoaded', async function () {
 
 // ── PASSWORD LOGIN ────────────────────────────────────────
 async function handlePasswordLogin() {
+  clearMessages();
+
+  // Anti-spam bot trap
+  const honeypot = document.getElementById('login-hp')?.value || '';
+  if (honeypot.trim().length > 0) {
+    console.warn('[Beard Banna Security] Bot login attempt rejected via honeypot.');
+    showError('Invalid login attempt detected.');
+    return;
+  }
+
   const email = document.getElementById('login-email')?.value.trim().toLowerCase() || '';
   const password = document.getElementById('login-password')?.value || '';
   const rememberCheckbox = document.getElementById('remember-me');
   const submitBtn = document.getElementById('login-submit-btn');
-
-  clearMessages();
 
   if (!email || !password) {
     showError('Please fill in your email and password.');
@@ -103,6 +111,9 @@ async function handlePasswordLogin() {
   resetLoading(submitBtn, 'Sign In');
 
   if (result.success) {
+    if (typeof window.trackGAEvent === 'function') {
+      window.trackGAEvent('login', { method: 'password' });
+    }
     if (result.user && window.API) {
       const displayName = result.user.user_metadata?.full_name || email.split('@')[0];
       API.setCurrentUser({

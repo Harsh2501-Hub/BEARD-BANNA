@@ -6,6 +6,13 @@ node_modules/
 .env
 *.env
 **/.env
+.env*.local
+.env.*.local
+.env.local
+
+# Local Scratches & Test Artifacts
+scratch/
+test-results/
 
 # Logs & Temporary Files
 *.log
@@ -29,3 +36,4 @@ Desktop.ini
 
 .vercel
 serve.js
+student_registration.html
