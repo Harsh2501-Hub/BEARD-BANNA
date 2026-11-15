@@ -119,35 +119,66 @@ async function loadUserOrders(userId, userEmail) {
   const countEl = document.getElementById('profile-orders-count');
   if (!container) return;
 
-  let orders = [];
+  container.innerHTML = `
+    <div style="text-align:center; padding:35px 20px;">
+      <div style="border: 3px solid rgba(251,191,36,0.2); border-top: 3px solid #fbbf24; border-radius: 50%; width: 36px; height: 36px; animation: spinBB 0.8s linear infinite; margin: 0 auto 14px auto;"></div>
+      <p style="color:#fbbf24; font-family:'Cinzel',serif; font-size:1.05rem; margin:0;">Synchronizing Orders...</p>
+    </div>
+    <style>@keyframes spinBB { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
+  `;
 
-  // 1. Try Supabase
+  let orders = [];
+  let dbSuccess = false;
+
+  // 1. Primary: Try Supabase get_customer_orders RPC
   if (window.supabaseClient) {
     try {
-      const { data, error } = await window.supabaseClient
-        .from('orders')
-        .select('*, order_items(*)')
-        .or(`user_id.eq.${userId},customer_email.eq.${userEmail.toLowerCase()}`)
-        .order('created_at', { ascending: false });
-
-      if (!error && Array.isArray(data)) {
-        orders = data;
+      const { data: rpcData, error: rpcErr } = await window.supabaseClient.rpc('get_customer_orders');
+      if (!rpcErr && Array.isArray(rpcData)) {
+        orders = rpcData;
+        dbSuccess = true;
       }
-    } catch (e) {
-      console.warn('[Profile Orders] Supabase error:', e.message);
+    } catch (e) {}
+
+    // Fallback: Direct query with OR
+    if (!dbSuccess) {
+      try {
+        const cleanEmail = (userEmail || '').toLowerCase().trim();
+        const { data, error } = await window.supabaseClient
+          .from('orders')
+          .select('*, order_items(*)')
+          .or(`user_id.eq.${userId},customer_email.eq.${cleanEmail}`)
+          .order('created_at', { ascending: false });
+
+        if (!error && Array.isArray(data)) {
+          orders = data;
+          dbSuccess = true;
+        }
+      } catch (e) {
+        console.warn('[Profile Orders] Supabase error:', e.message);
+      }
     }
   }
 
-  // 2. Fallback to localStorage orders
-  if (orders.length === 0) {
-    try {
-      const localOrders = JSON.parse(localStorage.getItem('orders') || '[]');
-      orders = localOrders.filter(o =>
-        (o.customerEmail && o.customerEmail.toLowerCase() === userEmail.toLowerCase()) ||
-        (o.email && o.email.toLowerCase() === userEmail.toLowerCase())
-      );
-    } catch (e) {}
-  }
+  // 2. Fallback to localStorage orders (deduplicated)
+  try {
+    const localOrders = JSON.parse(localStorage.getItem('orders') || '[]');
+    const cleanEmail = (userEmail || '').toLowerCase().trim();
+    localOrders.forEach(lo => {
+      const loEmail = (lo.customerEmail || lo.email || '').toLowerCase().trim();
+      const loId = String(lo.id || lo.orderId || '');
+      if (loEmail === cleanEmail && !orders.some(o => String(o.id || o.orderId || o.order_number) === loId)) {
+        orders.push(lo);
+      }
+    });
+  } catch (e) {}
+
+  // Sort newest first
+  orders.sort((a, b) => {
+    const timeA = new Date(a.created_at || a.orderDate || 0).getTime();
+    const timeB = new Date(b.created_at || b.orderDate || 0).getTime();
+    return timeB - timeA;
+  });
 
   if (countEl) countEl.textContent = orders.length;
 
@@ -472,3 +503,16 @@ window.togglePasswordVisibility = function (inputId, btn) {
     if (btn) btn.innerText = '👁️';
   }
 };
+
+// ── INITIALIZATION & LIVE RE-SYNC ──────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  loadProfile();
+
+  if (window.supabaseClient && window.supabaseClient.auth) {
+    window.supabaseClient.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+        loadProfile();
+      }
+    });
+  }
+});

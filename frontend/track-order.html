@@ -56,8 +56,8 @@
             <h1>Track Your Order</h1>
 
             <!-- Order Search Box -->
-            <div style="margin: 20px 0; text-align:center; display:flex; justify-content:center; gap:10px;">
-                <input type="text" id="search-order-id" placeholder="Enter Order ID (e.g. BB-2026-1001)" style="padding:12px 16px; border:1px solid #fbbf24; border-radius:8px; max-width:360px; width:100%; font-size:0.95rem;">
+            <div style="margin: 20px 0; text-align:center; display:flex; justify-content:center; gap:10px; flex-wrap:wrap;">
+                <input type="text" id="search-order-id" placeholder="Enter Order ID (e.g. BB92165757)" onkeyup="if(event.key==='Enter') loadOrderData()" style="padding:12px 16px; border:1px solid #fbbf24; border-radius:8px; max-width:360px; width:100%; font-size:0.95rem; background:#0f172a; color:#fff;">
                 <button onclick="loadOrderData()" class="checkout-btn">🔍 Track</button>
             </div>
 
@@ -73,10 +73,21 @@
 
             <!-- Active Order Details Container -->
             <div id="order-details-container">
-                <div class="tracking-header" style="background: rgba(15, 23, 42, 0.8); padding: 18px; border-radius: 10px; border: 1px solid rgba(251,191,36,0.2); margin-bottom: 25px;">
-                    <p><b>Order ID :</b> <span id="track-order-id" style="color: #fbbf24; font-weight: 700;"></span></p>
-                    <p><b>Order Date :</b> <span id="track-order-date"></span></p>
-                    <p><b>Estimated Delivery :</b> <span id="track-delivery-date" style="color: #22c55e; font-weight: 700;"></span></p>
+                <div class="tracking-header" style="background: rgba(15, 23, 42, 0.85); padding: 18px 22px; border-radius: 10px; border: 1px solid rgba(251,191,36,0.25); margin-bottom: 25px;">
+                    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:14px;">
+                        <div>
+                            <p style="margin:0 0 6px 0;"><b>Order ID :</b> <span id="track-order-id" style="color: #fbbf24; font-weight: 700;"></span></p>
+                            <p style="margin:0; font-size:0.88rem; color:#94a3b8;"><b>Tracking No :</b> <span id="tracking-number" style="color:#e2e8f0;"></span></p>
+                        </div>
+                        <div>
+                            <p style="margin:0 0 6px 0;"><b>Order Date :</b> <span id="track-order-date"></span></p>
+                            <p style="margin:0; font-size:0.88rem;"><b>Estimated Delivery :</b> <span id="track-delivery-date" style="color: #22c55e; font-weight: 700;"></span></p>
+                        </div>
+                        <div>
+                            <p style="margin:0 0 6px 0;"><b>Customer :</b> <span id="customer-name" style="color:#e2e8f0; font-weight:600;"></span></p>
+                            <p style="margin:0; font-size:0.85rem; color:#cbd5e1;"><b>Address :</b> <span id="customer-address"></span></p>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="tracking-timeline">

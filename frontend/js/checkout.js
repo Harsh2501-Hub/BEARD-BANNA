@@ -639,23 +639,38 @@ async function finalizeOrder(paymentMeta = {}) {
 
   if (window.supabaseClient) {
     try {
-      // Get authenticated user's UUID for the order link
+      // Get authenticated user's UUID for the order link with multi-source fallback
       let sbUserId = null;
-      if (window.SupabaseAuth) {
+      if (window.supabaseClient.auth) {
+        try {
+          const { data: uData } = await window.supabaseClient.auth.getUser();
+          if (uData?.user?.id) sbUserId = uData.user.id;
+        } catch (e) {}
+      }
+      if (!sbUserId && window.SupabaseAuth) {
         try {
           const sess = await SupabaseAuth.getSession();
           if (sess?.user?.id) sbUserId = sess.user.id;
         } catch (e) {}
       }
+      if (!sbUserId && window.API) {
+        try {
+          const legacyU = API.getCurrentUser();
+          if (legacyU?.id) sbUserId = legacyU.id;
+        } catch (e) {}
+      }
 
       if (btn) btn.innerHTML = `⏳ Confirming with database...`;
+
+      const cleanEmail = (newOrderObj.customerEmail || orderData.email || '').trim().toLowerCase();
+      const cleanPhone = (newOrderObj.customerPhone || orderData.phone || '').trim();
 
       const orderPayload = {
         order_number: newOrderObj.orderId,
         user_id: sbUserId,           // auth.uid() — links order to customer's Supabase UUID
-        customer_name: newOrderObj.customerName,
-        customer_email: newOrderObj.customerEmail,
-        customer_phone: newOrderObj.customerPhone,
+        customer_name: (newOrderObj.customerName || orderData.name || 'Customer').trim(),
+        customer_email: cleanEmail,
+        customer_phone: cleanPhone,
         shipping_address: newOrderObj.shippingAddress,
         subtotal: newOrderObj.subtotal,
         tax: newOrderObj.tax,
