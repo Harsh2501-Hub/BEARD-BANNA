@@ -38,6 +38,47 @@ async function loadProductDetail() {
 
   currentProduct = products.find(p => String(p.id) === String(productId) || p.slug === productId);
 
+  // Direct Supabase lookup fallback if not found in memory
+  if (!currentProduct && productId) {
+    try {
+      const sb = window.supabaseClient || (typeof getSupabaseClient === 'function' ? getSupabaseClient() : null);
+      if (sb) {
+        // Query by id or slug
+        const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId);
+        let q = sb.from('products').select('*');
+        if (isUuid) {
+          q = q.eq('id', productId);
+        } else {
+          q = q.eq('slug', productId);
+        }
+        const { data: dbProd } = await q.maybeSingle();
+
+        if (dbProd) {
+          const imgs = Array.isArray(dbProd.images) && dbProd.images.length > 0 ? dbProd.images : [dbProd.image_url || 'images/Product 1.jpeg'];
+          currentProduct = {
+            id: dbProd.id,
+            name: dbProd.name || dbProd.title,
+            slug: dbProd.slug,
+            price: Number(dbProd.price || 0),
+            category: dbProd.category || 'T-Shirts',
+            description: dbProd.description || '',
+            images: imgs,
+            image: imgs[0],
+            frontImage: imgs[0],
+            backImage: imgs[1] || imgs[0],
+            sideImage: imgs[2] || imgs[0],
+            stock: Number(dbProd.stock !== undefined ? dbProd.stock : 10),
+            sizes: Array.isArray(dbProd.sizes) && dbProd.sizes.length > 0 ? dbProd.sizes : ["S", "M", "L", "XL", "XXL"],
+            sizeStock: dbProd.size_stock || { S: 5, M: 5, L: 5, XL: 5, XXL: 5 },
+            is_active: dbProd.is_active !== false
+          };
+        }
+      }
+    } catch (sbErr) {
+      console.warn("Supabase single product fetch warning:", sbErr);
+    }
+  }
+
   if (!currentProduct && productId) {
     try {
       const res = await API.get(`/products/${productId}`);

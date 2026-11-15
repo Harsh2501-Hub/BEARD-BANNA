@@ -1,7 +1,7 @@
-// ===============================
-// PRODUCTS CATALOG - BACKEND & LOCAL SYNCED
-// Real-time stock from MongoDB via API
-// ===============================
+// ==============================================================================
+// BEARD BANNA — PRODUCTS CATALOG (CENTRAL SUPABASE DATABASE)
+// Single Source of Truth for Storefront, Collection, and Product Details
+// ==============================================================================
 
 const DEFAULT_CATALOG = [
   {
@@ -27,6 +27,7 @@ const DEFAULT_CATALOG = [
     reviewsCount: 28,
     ratingsCount: 28,
     isFeatured: true,
+    is_active: true,
     bestSeller: true
   },
   {
@@ -52,6 +53,7 @@ const DEFAULT_CATALOG = [
     reviewsCount: 19,
     ratingsCount: 19,
     isFeatured: true,
+    is_active: true,
     isNewArrival: true
   },
   {
@@ -77,6 +79,7 @@ const DEFAULT_CATALOG = [
     reviewsCount: 34,
     ratingsCount: 34,
     isFeatured: true,
+    is_active: true,
     bestSeller: true
   }
 ];
@@ -89,32 +92,16 @@ let products = (function() {
   return [...DEFAULT_CATALOG];
 })();
 
-// Helper: map a raw API product to our standard catalog object
-function mapApiProduct(p) {
+// Helper: map a raw Supabase database row to the catalog object
+function mapSupabaseProduct(p) {
   const sizes = ['S', 'M', 'L', 'XL', 'XXL'];
-
-  // --- Resolve sizeStock ---
-  // The API now always returns sizeStock as { S:0, M:0, L:37, XL:0, XXL:0 }
   const sizeMap = { S: 0, M: 0, L: 0, XL: 0, XXL: 0 };
 
-  if (p.sizeStock && typeof p.sizeStock === 'object' && !Array.isArray(p.sizeStock)) {
+  const rawSizeStock = (p.size_stock || p.sizeStock);
+  if (rawSizeStock && typeof rawSizeStock === 'object') {
     sizes.forEach(s => {
-      const val = Number(p.sizeStock[s]);
+      const val = Number(rawSizeStock[s]);
       sizeMap[s] = isNaN(val) ? 0 : val;
-    });
-  }
-
-  // Also cross-check variants in case sizeStock is still all zeros
-  if (Array.isArray(p.variants) && p.variants.length > 0) {
-    p.variants.forEach(v => {
-      if (v.size && sizeMap.hasOwnProperty(v.size.toUpperCase())) {
-        const existing = sizeMap[v.size.toUpperCase()];
-        const fromVariant = Number(v.stock) || 0;
-        // Use variant value if sizeMap is 0 and variant has stock
-        if (existing === 0 && fromVariant > 0) {
-          sizeMap[v.size.toUpperCase()] = fromVariant;
-        }
-      }
     });
   }
 
@@ -124,73 +111,118 @@ function mapApiProduct(p) {
 
   const availableSizes = sizes.filter(s => sizeMap[s] > 0);
 
-  const front = p.frontImage || p.image || (Array.isArray(p.images) && p.images[0]) || 'images/Product 1.jpeg';
-  const back  = p.backImage  || p.secondaryImage || (Array.isArray(p.images) && p.images[1]) || front;
-  const side  = p.sideImage  || (Array.isArray(p.images) && p.images[2]) || front;
+  const imagesArr = Array.isArray(p.images) ? p.images : (
+    (typeof p.images === 'string' && p.images.startsWith('[')) ? JSON.parse(p.images) : []
+  );
+
+  const front = p.image || p.frontImage || (imagesArr.length > 0 ? imagesArr[0] : 'images/Product 1.jpeg');
+  const back = p.secondary_image || p.backImage || (imagesArr.length > 1 ? imagesArr[1] : front);
+  const side = p.sideImage || (imagesArr.length > 2 ? imagesArr[2] : front);
 
   return {
-    id: String(p._id || p.id),
-    _id: String(p._id || p.id),
-    name: p.title || p.name || 'Product',
+    id: String(p.id || p._id),
+    _id: String(p.id || p._id),
+    name: p.name || p.title || 'Product',
     title: p.title || p.name || 'Product',
     price: Number(p.price) || 0,
-    originalPrice: Number(p.originalPrice) || 0,
-    category: (p.category && p.category.name) ? p.category.name : (p.category || 'T-Shirts'),
+    originalPrice: Number(p.original_price || p.originalPrice || 0),
+    category: p.category || 'T-Shirts',
     image: front,
     secondaryImage: back,
     frontImage: front,
     backImage: back,
     sideImage: side,
-    images: [front, back, side],
+    images: imagesArr.length > 0 ? imagesArr : [front, back, side],
     description: p.description || '',
-    sizes: availableSizes.length > 0 ? availableSizes : sizes,
+    sizes: availableSizes.length > 0 ? availableSizes : ['M'],
     stock: totalStock,
-    sizeStock: sizeMap,       // ← ALWAYS present with all size keys
-    rating: p.ratingsAverage || p.rating || 4.8,
-    ratingsAverage: p.ratingsAverage || p.rating || 4.8,
-    reviewsCount: p.reviewsCount || p.ratingsCount || 0,
-    isFeatured: p.isFeatured || false,
-    isNewArrival: p.isNewArrival || false,
-    bestSeller: p.bestSeller || false,
-    sku: p.sku || '',
-    slug: p.slug || ''
+    sizeStock: sizeMap,
+    is_active: p.is_active !== undefined ? p.is_active : true,
+    isFeatured: p.is_featured || false,
+    rating: p.ratingsAverage || p.rating || 4.9,
+    ratingsAverage: p.ratingsAverage || p.rating || 4.9,
+    reviewsCount: p.reviewsCount || p.ratingsCount || 24,
+    ratingsCount: p.ratingsCount || 24,
+    slug: p.slug || (p.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
   };
 }
 
+// Ensure Supabase client is hydrated before fetching
+async function awaitSupabaseClient(timeoutMs = 1500) {
+  if (window.supabaseClient) return window.supabaseClient;
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (window.supabaseClient) return window.supabaseClient;
+    await new Promise(r => setTimeout(r, 60));
+  }
+  return window.supabaseClient || null;
+}
+
+// ── PRIMARY DATABASE QUERY: SUPABASE CENTRAL DB ──────────────────────────────
 async function fetchProductsFromAPI() {
-  try {
-    const res = await API.get('/products');
+  const sb = await awaitSupabaseClient();
 
-    // Handle both res.data.products and res.data (flat array)
-    let apiList = null;
-    if (res.success) {
-      if (Array.isArray(res.data)) {
-        apiList = res.data;
-      } else if (res.data && Array.isArray(res.data.products)) {
-        apiList = res.data.products;
-      } else if (Array.isArray(res.products)) {
-        apiList = res.products;
+  if (sb) {
+    // 1. Try public get_public_products RPC
+    try {
+      const { data: rpcData, error: rpcErr } = await sb.rpc('get_public_products');
+      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+        products = rpcData.map(mapSupabaseProduct);
+        try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
+        return products;
       }
-    }
+    } catch (e) {}
 
-    if (apiList && apiList.length > 0) {
-      // Replace products entirely with fresh API data (real-time)
-      products = apiList.map(mapApiProduct);
-      // Cache in localStorage for offline fallback only
-      try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
-    } else {
-      // Fallback to localStorage cache
-      const cached = JSON.parse(localStorage.getItem('products') || '[]');
-      if (cached.length > 0) products = cached.map(mapApiProduct);
+    // 2. Direct Supabase SELECT (RLS allows is_active = true)
+    try {
+      const { data, error } = await sb
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      if (!error && Array.isArray(data) && data.length > 0) {
+        products = data.map(mapSupabaseProduct);
+        try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
+        return products;
+      }
+    } catch (err) {
+      console.warn('[Products] Supabase table query notice:', err.message);
     }
-  } catch (err) {
-    console.warn('API unreachable, using localStorage cache:', err.message);
-    const cached = JSON.parse(localStorage.getItem('products') || '[]');
-    if (cached.length > 0) products = cached.map(mapApiProduct);
   }
 
+  // 3. Fallback: Secondary REST API (if available)
+  try {
+    if (typeof API !== 'undefined' && API.get) {
+      const res = await API.get('/products');
+      let apiList = null;
+      if (res && res.success) {
+        apiList = Array.isArray(res.data) ? res.data : (res.data?.products || res.products);
+      }
+      if (apiList && apiList.length > 0) {
+        products = apiList.map(mapSupabaseProduct);
+        try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
+        return products;
+      }
+    }
+  } catch (e) {}
+
+  // 4. Fallback: LocalStorage cache
+  try {
+    const cached = JSON.parse(localStorage.getItem('products') || '[]');
+    if (cached.length > 0) {
+      products = cached.map(mapSupabaseProduct);
+      return products;
+    }
+  } catch (e) {}
+
+  // 5. Default catalog
+  products = [...DEFAULT_CATALOG];
   return products;
 }
 
+// Expose globally
+window.products = products;
 window.fetchProductsFromAPI = fetchProductsFromAPI;
-window.mapApiProduct = mapApiProduct;
+window.mapSupabaseProduct = mapSupabaseProduct;
+window.mapApiProduct = mapSupabaseProduct;

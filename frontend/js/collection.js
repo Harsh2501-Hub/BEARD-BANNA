@@ -89,6 +89,15 @@ function displayProducts(productArray) {
 }
 
 async function initCollection() {
+  if (productList) {
+    productList.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 48px 16px; color: #fbbf24;">
+        <div style="font-size: 2rem; margin-bottom: 12px; animation: spin 1.2s linear infinite; display: inline-block;">👑</div>
+        <p style="font-family: 'Cinzel', serif; letter-spacing: 1px; font-size: 1.1rem; color: #f1f5f9; margin-bottom: 4px;">Loading Royal Heritage Collection...</p>
+        <p style="font-size: 0.85rem; color: #94a3b8;">Connecting to central vaults...</p>
+      </div>
+    `;
+  }
   let loadedProducts = products;
   if (typeof fetchProductsFromAPI === "function") {
     loadedProducts = await fetchProductsFromAPI();
