@@ -4,7 +4,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
+const { execSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 let passedTests = 0;
@@ -25,34 +25,17 @@ async function runTests() {
 
   // TEST 1: Live Supabase Database Query (Single Source of Truth)
   console.log('[Suite 1: Live Central Database]');
-  await new Promise((resolve) => {
-    const url = 'https://xdetdylcbcvtsuxteeen.supabase.co/rest/v1/products?select=id,name,price,is_active';
-    const req = https.get(url, {
-      headers: {
-        'apikey': 'sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv',
-        'Authorization': 'Bearer sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv'
-      }
-    }, (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => {
-        try {
-          const products = JSON.parse(data);
-          assert(Array.isArray(products) && products.length >= 3, `Supabase public.products returns active products (Found: ${products.length})`);
-          assert(products.some(p => p.name.includes('Royal Warrior')), 'Product 1: Royal Warrior Embroidered Tee present in DB');
-          assert(products.some(p => p.name.includes('Imperial Heritage')), 'Product 2: Imperial Heritage Polo Shirt present in DB');
-          assert(products.some(p => p.name.includes('Rajputana Valor')), 'Product 3: Rajputana Valor Heavyweight Hoodie present in DB');
-        } catch (e) {
-          assert(false, `Failed to parse Supabase products response: ${e.message}`);
-        }
-        resolve();
-      });
-    });
-    req.on('error', (err) => {
-      assert(false, `Supabase connection error: ${err.message}`);
-      resolve();
-    });
-  });
+  try {
+    const raw = execSync('curl.exe -4 -s "https://xdetdylcbcvtsuxteeen.supabase.co/rest/v1/products?select=id,name,price,is_active" -H "apikey: sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv" -H "Authorization: Bearer sb_publishable_1kPBK6tBanQ2Hn__ZYdJVg_oskboZIv"', { encoding: 'utf8' });
+    const products = JSON.parse(raw);
+    assert(Array.isArray(products) && products.length >= 4, `Supabase public.products returns active products including TEST (Found: ${products.length})`);
+    assert(products.some(p => p.name.includes('Royal Warrior')), 'Product 1: Royal Warrior Embroidered Tee present in DB');
+    assert(products.some(p => p.name.includes('Imperial Heritage')), 'Product 2: Imperial Heritage Polo Shirt present in DB');
+    assert(products.some(p => p.name.includes('Rajputana Valor')), 'Product 3: Rajputana Valor Heavyweight Hoodie present in DB');
+    assert(products.some(p => p.name.toLowerCase() === 'test'), 'Product 4: Test product present in DB');
+  } catch (err) {
+    assert(false, `Supabase connection query error: ${err.message}`);
+  }
 
   // TEST 2: Frontend Product Module Integrity
   console.log('\n[Suite 2: Frontend Product Fetching]');
@@ -65,6 +48,7 @@ async function runTests() {
   // TEST 3: Admin Product Management Integrity
   console.log('\n[Suite 3: Admin Panel Product CRUD & Persistence]');
   const adminProductsJs = fs.readFileSync(path.join(ROOT_DIR, 'admin-panel', 'js', 'products.js'), 'utf8');
+  assert(adminProductsJs.includes('function escapeHtml'), 'admin-panel/js/products.js defines self-contained escapeHtml to prevent ReferenceError');
   assert(adminProductsJs.includes('uploadImageToStorage'), 'admin-panel/js/products.js uploads images to persistent storage');
   assert(/storage\s*\.\s*from\(\s*['"]products['"]\s*\)/.test(adminProductsJs), 'admin-panel/js/products.js uses products storage bucket');
   assert(adminProductsJs.includes('admin_save_product') || adminProductsJs.includes('.from(\'products\').upsert'), 'admin-panel/js/products.js persists directly to Supabase DB');

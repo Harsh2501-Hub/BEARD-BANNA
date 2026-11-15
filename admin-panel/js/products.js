@@ -7,6 +7,39 @@ let products = [];
 let editingProductId = null;
 let currentPreviewAngle = "front";
 
+// ── UTILITY HELPERS (SELF-CONTAINED XSS DEFENSE & TOAST) ──────────────────────
+function escapeHtml(str) {
+  if (str === null || str === undefined) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+window.escapeHtml = escapeHtml;
+
+function safeToast(msg) {
+  if (typeof window.showToast === 'function') {
+    window.showToast(msg);
+  } else if (typeof showToast === 'function') {
+    showToast(msg);
+  } else {
+    alert(msg);
+  }
+}
+
+async function awaitSupabaseClient(timeoutMs = 1500) {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (window.supabaseClient) {
+      return window.supabaseClient;
+    }
+    await new Promise(r => setTimeout(r, 50));
+  }
+  return window.supabaseClient || null;
+}
+
 // Track pending image files selected for upload
 const pendingFiles = {
   front: null,
@@ -24,24 +57,31 @@ const currentImageUrls = {
 // ── 1. LOAD ADMIN PRODUCTS FROM CENTRAL SUPABASE DATABASE ────────────────────
 async function loadAdminProducts() {
   const tbody = document.getElementById("products-table-body");
+  const countEl = document.getElementById("product-count");
+
+  if (countEl) countEl.textContent = "Loading...";
+
   if (tbody) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="7" style="text-align:center; padding: 30px; color:#94a3b8;">
-          <div style="border: 3px solid rgba(251,191,36,0.2); border-top: 3px solid #fbbf24; border-radius: 50%; width: 32px; height: 32px; animation: spinAdmin 0.8s linear infinite; margin: 0 auto 12px auto;"></div>
-          <p style="color:#fbbf24; font-weight:600; margin:0;">Loading products from central database...</p>
+        <td colspan="6" style="text-align:center; padding: 36px 20px; color:#94a3b8;">
+          <div style="border: 3px solid rgba(251,191,36,0.2); border-top: 3px solid #fbbf24; border-radius: 50%; width: 34px; height: 34px; animation: spinAdmin 0.8s linear infinite; margin: 0 auto 12px auto;"></div>
+          <p style="color:#fbbf24; font-weight:600; font-size:1rem; margin:0 0 4px 0;">Loading products from central database...</p>
+          <span style="font-size:0.8rem; color:#64748b;">Connecting to Supabase PostgreSQL</span>
         </td>
       </tr>
       <style>@keyframes spinAdmin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
     `;
   }
 
+  const sb = await awaitSupabaseClient(1500);
   let dbProducts = null;
+  let queryError = null;
 
-  // Primary: Query Supabase public.products
-  if (window.supabaseClient) {
+  // 1. Primary: Direct query to Supabase public.products table
+  if (sb) {
     try {
-      const { data, error } = await window.supabaseClient
+      const { data, error } = await sb
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
@@ -49,31 +89,97 @@ async function loadAdminProducts() {
       if (!error && Array.isArray(data)) {
         dbProducts = data;
       } else if (error) {
-        console.warn('[Admin Products] Supabase query notice:', error.message);
+        queryError = error.message;
+        console.warn('[Admin Products] Primary Supabase query notice:', error.message);
       }
     } catch (e) {
-      console.warn('[Admin Products] Supabase query exception:', e.message);
+      queryError = e.message;
+      console.warn('[Admin Products] Primary Supabase query exception:', e.message);
     }
   }
 
-  // Fallback: Check local storage only if DB was completely unreachable
-  if (dbProducts === null) {
+  // 2. Fallback: Try get_public_products RPC if primary table select was blocked
+  if (dbProducts === null && sb) {
     try {
-      const cached = JSON.parse(localStorage.getItem('products') || '[]');
-      if (cached.length > 0) dbProducts = cached;
+      const { data: rpcData, error: rpcErr } = await sb.rpc('get_public_products');
+      if (!rpcErr && Array.isArray(rpcData) && rpcData.length > 0) {
+        dbProducts = rpcData;
+        queryError = null;
+      }
     } catch (e) {}
   }
 
-  // Map to standardized format
-  if (Array.isArray(dbProducts) && dbProducts.length > 0) {
-    products = dbProducts.map(mapAdminProductRecord);
-  } else {
-    products = [];
+  // 3. Fallback: Check local storage only if network / database was completely unreachable
+  if (dbProducts === null) {
+    try {
+      const cached = JSON.parse(localStorage.getItem('products') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) {
+        dbProducts = cached;
+        queryError = null;
+      }
+    } catch (e) {}
   }
 
-  // Cache in localStorage for offline resiliency
-  try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
-  renderProducts();
+  // 4. Handle Error State (Database error and no fallback data)
+  if (dbProducts === null && queryError) {
+    renderErrorState(queryError);
+    return;
+  }
+
+  // 5. Handle Empty State vs Success State
+  if (Array.isArray(dbProducts)) {
+    products = dbProducts.map(mapAdminProductRecord);
+    try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
+    renderProducts(products);
+  } else {
+    products = [];
+    renderEmptyState();
+  }
+}
+
+function renderErrorState(errorMessage) {
+  const tbody = document.getElementById("products-table-body");
+  const countEl = document.getElementById("product-count");
+
+  if (countEl) countEl.textContent = "Error";
+
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align:center; padding: 40px 20px;">
+          <div style="font-size:2.2rem; margin-bottom:10px;">⚠️</div>
+          <h3 style="color:#ef4444; margin:0 0 8px 0; font-size:1.15rem;">Failed to Load Products from Database</h3>
+          <p style="color:#94a3b8; font-size:0.85rem; max-width:480px; margin:0 auto 18px auto;">
+            ${escapeHtml(errorMessage || 'Database connection error. Please verify your Supabase network connection.')}
+          </p>
+          <button onclick="loadAdminProducts()" style="background:#fbbf24; color:#0f172a; border:none; padding:9px 20px; border-radius:6px; font-weight:700; cursor:pointer; font-size:0.9rem;">
+            🔄 Retry Connection
+          </button>
+        </td>
+      </tr>
+    `;
+  }
+}
+
+function renderEmptyState() {
+  const tbody = document.getElementById("products-table-body");
+  const countEl = document.getElementById("product-count");
+
+  if (countEl) countEl.textContent = "0 Products";
+
+  if (tbody) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6">
+          <div class="empty-products" style="text-align:center; padding: 36px 20px;">
+            <div style="font-size:2.4rem; margin-bottom:10px;">📦</div>
+            <h3 style="color:#fbbf24; margin:0 0 6px 0;">No Products in Central Database</h3>
+            <p style="color:#94a3b8; font-size:0.9rem;">The catalog is currently empty. Add your first Rajputana creation using the form on the right.</p>
+          </div>
+        </td>
+      </tr>
+    `;
+  }
 }
 
 function mapAdminProductRecord(p) {
@@ -128,68 +234,63 @@ function mapAdminProductRecord(p) {
 // ── 2. RENDER PRODUCTS TABLE ──────────────────────────────────────────────────
 function renderProducts(productList = products) {
   const tbody = document.getElementById("products-table-body");
+  const countEl = document.getElementById("product-count");
   if (!tbody) return;
-  tbody.innerHTML = "";
 
-  if (productList.length === 0) {
-    tbody.innerHTML = `
-      <tr>
-        <td colspan="7">
-          <div class="empty-products" style="text-align:center; padding: 30px;">
-            📦 <h3>No Products in Central Database</h3>
-            <p>Add your first luxury Rajputana product using the form.</p>
-          </div>
-        </td>
-      </tr>
-    `;
-    const countEl = document.getElementById("product-count");
-    if (countEl) countEl.textContent = "0 Products";
+  if (!Array.isArray(productList) || productList.length === 0) {
+    renderEmptyState();
     return;
   }
 
-  productList.forEach(product => {
-    const front = product.frontImage || product.image || "images/Product 1.jpeg";
-    const back = product.backImage || product.secondaryImage || front;
-    const side = product.sideImage || front;
-    const isPublished = product.is_active !== false;
+  tbody.innerHTML = "";
 
-    tbody.innerHTML += `
-      <tr style="${isPublished ? '' : 'opacity: 0.65; background: rgba(15, 23, 42, 0.4);'}">
-        <td>
-          <div style="display:flex; gap:4px;">
-            <img src="${escapeHtml(front)}" title="Front View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #38bdf8;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
-            <img src="${escapeHtml(back)}" title="Back View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #475569;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
-            <img src="${escapeHtml(side)}" title="Side View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #475569;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
-          </div>
-        </td>
-        <td>
-          <div class="product-info">
-            <h4 style="margin:0; font-size:0.95rem; color:#f8fafc;">${escapeHtml(product.name)}</h4>
-            <span style="color:#94a3b8; font-size:0.8rem;">${escapeHtml(product.category)}</span>
-          </div>
-        </td>
-        <td><span class="price-tag" style="font-weight:700; color:#fbbf24;">₹${product.price}</span></td>
-        <td>
-          ${isPublished 
-            ? `<span style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3); font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:12px;">🟢 Published</span>`
-            : `<span style="background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3); font-size:0.75rem; font-weight:600; padding:3px 8px; border-radius:12px;">⚪ Draft</span>`}
-        </td>
-        <td>${getPerSizeStockBadge(product)}</td>
-        <td>
-          <div style="display:flex; gap:6px; flex-wrap:wrap;">
-            <button class="edit-btn" onclick="editProduct('${escapeHtml(product.id)}')" style="background:#0284c7; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">✏ Edit</button>
-            <button onclick="togglePublish('${escapeHtml(product.id)}', ${isPublished})" style="background:${isPublished ? '#d97706' : '#16a34a'}; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">
-              ${isPublished ? '👁 Unpublish' : '🚀 Publish'}
-            </button>
-            <button class="delete-btn" onclick="deleteProduct('${escapeHtml(product.id)}')" style="background:#ef4444; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑 Delete</button>
-          </div>
-        </td>
-      </tr>
-    `;
-  });
+  try {
+    productList.forEach(product => {
+      const front = product.frontImage || product.image || "images/Product 1.jpeg";
+      const back = product.backImage || product.secondaryImage || front;
+      const side = product.sideImage || front;
+      const isPublished = product.is_active !== false;
 
-  const countEl = document.getElementById("product-count");
-  if (countEl) countEl.textContent = `${productList.length} Products`;
+      tbody.innerHTML += `
+        <tr style="${isPublished ? '' : 'opacity: 0.65; background: rgba(15, 23, 42, 0.4);'}">
+          <td>
+            <div style="display:flex; gap:4px;">
+              <img src="${escapeHtml(front)}" title="Front View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #38bdf8;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+              <img src="${escapeHtml(back)}" title="Back View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #475569;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+              <img src="${escapeHtml(side)}" title="Side View" style="width:38px; height:38px; object-fit:cover; border-radius:4px; border:1px solid #475569;" onerror="this.onerror=null; this.src='images/Product 1.jpeg';">
+            </div>
+          </td>
+          <td>
+            <div class="product-info">
+              <h4 style="margin:0; font-size:0.95rem; color:#f8fafc;">${escapeHtml(product.name)}</h4>
+              <span style="color:#94a3b8; font-size:0.8rem;">${escapeHtml(product.category)}</span>
+            </div>
+          </td>
+          <td><span class="price-tag" style="font-weight:700; color:#fbbf24;">₹${product.price}</span></td>
+          <td>
+            ${isPublished 
+              ? `<span style="background:rgba(34,197,94,0.15); color:#22c55e; border:1px solid rgba(34,197,94,0.3); font-size:0.75rem; font-weight:700; padding:3px 8px; border-radius:12px;">🟢 Published</span>`
+              : `<span style="background:rgba(148,163,184,0.15); color:#94a3b8; border:1px solid rgba(148,163,184,0.3); font-size:0.75rem; font-weight:600; padding:3px 8px; border-radius:12px;">⚪ Draft</span>`}
+          </td>
+          <td>${getPerSizeStockBadge(product)}</td>
+          <td>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button class="edit-btn" onclick="editProduct('${escapeHtml(product.id)}')" style="background:#0284c7; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">✏ Edit</button>
+              <button onclick="togglePublish('${escapeHtml(product.id)}', ${isPublished})" style="background:${isPublished ? '#d97706' : '#16a34a'}; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">
+                ${isPublished ? '👁 Unpublish' : '🚀 Publish'}
+              </button>
+              <button class="delete-btn" onclick="deleteProduct('${escapeHtml(product.id)}')" style="background:#ef4444; color:white; border:none; padding:5px 9px; border-radius:4px; cursor:pointer; font-size:0.8rem;">🗑 Delete</button>
+            </div>
+          </td>
+        </tr>
+      `;
+    });
+
+    if (countEl) countEl.textContent = `${productList.length} Product${productList.length !== 1 ? 's' : ''}`;
+  } catch (err) {
+    console.error('[Admin Products] renderProducts error:', err);
+    renderErrorState('Error rendering product table: ' + err.message);
+  }
 }
 
 function getPerSizeStockBadge(product) {
@@ -408,6 +509,14 @@ if (productForm) {
     if (backImg.startsWith('blob:')) backImg = frontImg;
     if (sideImg.startsWith('blob:')) sideImg = frontImg;
 
+    let currentIsActive = true;
+    if (editingProductId) {
+      const existing = products.find(p => String(p.id) === String(editingProductId));
+      if (existing && existing.is_active !== undefined) {
+        currentIsActive = existing.is_active;
+      }
+    }
+
     const productId = editingProductId || ("prod_" + Date.now());
     const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
@@ -426,7 +535,7 @@ if (productForm) {
       size_stock: sizeStock,
       description: description,
       is_featured: false,
-      is_active: true,
+      is_active: currentIsActive,
       updated_at: new Date().toISOString()
     };
 
@@ -452,7 +561,7 @@ if (productForm) {
           p_size_stock: sizeStock,
           p_description: description,
           p_is_featured: false,
-          p_is_active: true
+          p_is_active: currentIsActive
         });
 
         if (!rpcErr && rpcRes && rpcRes.success) {
@@ -497,11 +606,7 @@ if (productForm) {
       return;
     }
 
-    if (typeof showToast === "function") {
-      showToast(editingProductId ? "✏ Product Updated in Central Database!" : "🎉 Product Saved to Central Database!");
-    } else {
-      alert(editingProductId ? "✏ Product Updated Successfully!" : "🎉 Product Added Successfully!");
-    }
+    safeToast(editingProductId ? "✏ Product Updated in Central Database!" : "🎉 Product Saved to Central Database!");
 
     // Clear form state
     editingProductId = null;
@@ -538,7 +643,20 @@ function editProduct(id) {
 
   if (nameInput) nameInput.value = product.name;
   if (priceInput) priceInput.value = product.price;
-  if (categoryInput) categoryInput.value = product.category;
+
+  if (categoryInput) {
+    let exists = false;
+    for (let opt of categoryInput.options) {
+      if (opt.value === product.category) { exists = true; break; }
+    }
+    if (!exists && product.category) {
+      const newOpt = document.createElement("option");
+      newOpt.value = product.category;
+      newOpt.textContent = product.category;
+      categoryInput.appendChild(newOpt);
+    }
+    categoryInput.value = product.category || "";
+  }
 
   const map = product.sizeStock || { S: 0, M: 0, L: Number(product.stock || 0), XL: 0, XXL: 0 };
   ["S", "M", "L", "XL", "XXL"].forEach(sz => {
@@ -603,9 +721,7 @@ async function togglePublish(id, currentPublished) {
   }
 
   if (success) {
-    if (typeof showToast === "function") {
-      showToast(newStatus ? "🟢 Product Published to Collection!" : "⚪ Product Unpublished (Draft)");
-    }
+    safeToast(newStatus ? "🟢 Product Published to Collection!" : "⚪ Product Unpublished (Draft)");
     await loadAdminProducts();
   } else {
     alert("❌ Failed to update publish status. Please check admin permissions.");
@@ -637,7 +753,10 @@ async function deleteProduct(id) {
   }
 
   if (success) {
-    if (typeof showToast === "function") showToast("🗑 Product Deleted from Database");
+    safeToast("🗑 Product Deleted from Database");
+    // Remove immediately from in-memory array and localStorage
+    products = products.filter(p => String(p.id) !== String(id));
+    try { localStorage.setItem('products', JSON.stringify(products)); } catch(e) {}
     await loadAdminProducts();
   } else {
     alert("❌ Failed to delete product. Please check admin permissions.");
